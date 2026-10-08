@@ -24,6 +24,7 @@ export default function SettingsPage() {
         </div>
         <div style={{ display: "flex", gap: ".6rem", flexWrap: "wrap" }}>
           <Link className="inc-btn inc-btn-ghost" to={`/profile/${currentUser.id}`}>View my public profile</Link>
+          <Link className="inc-btn inc-btn-ghost" to="/feedback">Give feedback</Link>
           <Link className="inc-btn inc-btn-ghost" to="/logout">Log out</Link>
         </div>
       </section>

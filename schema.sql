@@ -610,3 +610,27 @@ $$;
 --
 -- To turn the check off again:   delete from public.allowed_email_domains;
 -- ---------------------------------------------------------------------
+
+-- ---------------------------------------------------------------------
+-- 10. User Feedback
+-- ---------------------------------------------------------------------
+create table if not exists public.feedback (
+  id            uuid primary key default gen_random_uuid(),
+  user_id       uuid references public.profiles (id) on delete set null,
+  user_name     text,
+  contact_email text,
+  category      text not null check (category in ('feature', 'bug', 'college', 'general')),
+  rating        int check (rating between 1 and 5),
+  message       text not null check (char_length(message) between 5 and 3000),
+  created_at    timestamptz not null default now()
+);
+
+alter table public.feedback enable row level security;
+
+-- Anyone (signed in or guest) can insert feedback
+drop policy if exists "anyone can submit feedback" on public.feedback;
+create policy "anyone can submit feedback" on public.feedback
+  for insert to anon, authenticated with check (true);
+
+grant insert on public.feedback to anon, authenticated;
+

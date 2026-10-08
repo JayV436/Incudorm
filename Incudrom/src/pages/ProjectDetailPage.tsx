@@ -4,6 +4,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useApp } from "../appContext";
 import { ApplicationRow } from "../components/ApplicationRow";
 import { ApplyModal } from "../components/ApplyModal";
+import { ShareModal } from "../components/ShareModal";
 import { Avatar, Chip, EmptyState } from "../components/ui";
 import { popFor, timeAgo } from "../lib/format";
 
@@ -13,6 +14,7 @@ export default function ProjectDetailPage() {
   const nav = useNavigate();
   const { projects, applications, currentUser, getUser, setProjectStatus, startThread } = useApp();
   const [applyOpen, setApplyOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
 
   const project = projects.find((p) => p.id === id);
 
@@ -49,11 +51,27 @@ export default function ProjectDetailPage() {
     <div className="inc-detail">
       <div className="inc-stack">
         <div>
-          <div className="inc-chips" style={{ marginBottom: "1rem" }}>
+          <div className="inc-chips" style={{ marginBottom: "1rem", alignItems: "center" }}>
             <Chip tone="sun">{project.stage}</Chip>
             <Chip>{project.hoursPerWeek} hrs/week</Chip>
             <Chip>Posted {timeAgo(project.createdAt)}</Chip>
             {project.status === "closed" && <Chip tone="solid">Closed</Chip>}
+            <button
+              type="button"
+              className="inc-btn inc-btn-ghost inc-btn-small"
+              onClick={() => setShareOpen(true)}
+              style={{ marginLeft: "auto", padding: ".25rem .75rem", fontSize: ".85rem", display: "inline-flex", gap: ".35rem", alignItems: "center" }}
+              aria-label="Share this idea"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="18" cy="5" r="3" />
+                <circle cx="6" cy="12" r="3" />
+                <circle cx="18" cy="19" r="3" />
+                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+              </svg>
+              Share
+            </button>
           </div>
           <h1>{project.title}</h1>
           <p className="inc-pitchline">{project.pitch}</p>
@@ -197,9 +215,32 @@ export default function ProjectDetailPage() {
             </button>
           )}
         </div>
+
+        <div className="inc-card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div>
+            <h3 style={{ margin: 0, fontSize: "1.05rem" }}>Share this idea</h3>
+            <span className="inc-muted inc-small">Send to friends & groups</span>
+          </div>
+          <button
+            type="button"
+            className="inc-btn inc-btn-ghost inc-btn-small"
+            onClick={() => setShareOpen(true)}
+            style={{ display: "inline-flex", gap: ".4rem", alignItems: "center" }}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="18" cy="5" r="3" />
+              <circle cx="6" cy="12" r="3" />
+              <circle cx="18" cy="19" r="3" />
+              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+              <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+            </svg>
+            Share
+          </button>
+        </div>
       </aside>
 
       <ApplyModal project={project} open={applyOpen} onClose={() => setApplyOpen(false)} />
+      <ShareModal project={project} open={shareOpen} onClose={() => setShareOpen(false)} />
     </div>
   );
 }

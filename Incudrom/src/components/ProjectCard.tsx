@@ -1,9 +1,11 @@
+import { useState } from "react";
 import type { CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import type { Project, Student } from "../types";
 import { Avatar, Chip } from "./ui";
 import { popFor, timeAgo } from "../lib/format";
 import { CARD_COLORS } from "../types";
+import { ShareModal } from "./ShareModal";
 
 interface Props {
   project: Project;
@@ -16,6 +18,7 @@ interface Props {
 }
 
 export function ProjectCard({ project, owner, mine, preview, tilt }: Props) {
+  const [shareOpen, setShareOpen] = useState(false);
   const colorObj = project.color ? CARD_COLORS.find((c) => c.id === project.color) : null;
   const style = {
     "--pop": colorObj?.value ?? popFor(project.id),
@@ -24,8 +27,28 @@ export function ProjectCard({ project, owner, mine, preview, tilt }: Props) {
   const content = (
     <>
       <div className="inc-pcard-top">
-        <span>{project.stage}</span>
-        <span>{project.hoursPerWeek} hrs/week</span>
+        <span>{project.stage} · {project.hoursPerWeek} hrs/week</span>
+        {!preview && (
+          <button
+            type="button"
+            className="inc-card-share-btn"
+            title="Share this idea"
+            aria-label="Share this idea"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setShareOpen(true);
+            }}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="18" cy="5" r="3" />
+              <circle cx="6" cy="12" r="3" />
+              <circle cx="18" cy="19" r="3" />
+              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+              <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+            </svg>
+          </button>
+        )}
       </div>
       <div className="inc-pcard-body">
         <h3>{project.title || "Your idea title"}</h3>
@@ -65,8 +88,11 @@ export function ProjectCard({ project, owner, mine, preview, tilt }: Props) {
     );
   }
   return (
-    <Link className="inc-pcard" style={style} to={`/projects/${project.id}`}>
-      {content}
-    </Link>
+    <>
+      <Link className="inc-pcard" style={style} to={`/projects/${project.id}`}>
+        {content}
+      </Link>
+      <ShareModal project={project} open={shareOpen} onClose={() => setShareOpen(false)} />
+    </>
   );
 }

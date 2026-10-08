@@ -132,7 +132,9 @@ const CSS = `
   transition:transform .15s ease,box-shadow .15s ease;
 }
 .incudorm a.inc-pcard:hover{transform:translate(-2px,-2px) rotate(var(--tilt,0deg));box-shadow:8px 8px 0 var(--inc-ink)}
-.incudorm .inc-pcard-top{background:var(--pop);color:var(--inc-pop-ink);padding:.65rem 1rem;font-weight:600;font-size:.9rem;display:flex;justify-content:space-between;gap:.5rem}
+.incudorm .inc-pcard-top{background:var(--pop);color:var(--inc-pop-ink);padding:.65rem 1rem;font-weight:600;font-size:.9rem;display:flex;justify-content:space-between;align-items:center;gap:.5rem}
+.incudorm .inc-card-share-btn{background:rgba(20,20,58,.08);border:none;color:var(--inc-pop-ink);border-radius:999px;width:24px;height:24px;display:grid;place-items:center;cursor:pointer;transition:background .15s ease,transform .15s ease}
+.incudorm .inc-card-share-btn:hover{background:rgba(20,20,58,.2);transform:scale(1.1)}
 .incudorm .inc-pcard-body{padding:1rem 1.1rem 1.1rem;display:flex;flex-direction:column;gap:.7rem;flex:1}
 .incudorm .inc-pcard h3{font-size:1.35rem;margin:0}
 .incudorm .inc-pcard .pitch{color:var(--inc-muted);font-size:.97rem;line-height:1.45;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}

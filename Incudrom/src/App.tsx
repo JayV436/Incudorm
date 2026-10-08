@@ -21,6 +21,7 @@ import MyApplicationsPage from "./pages/dashboard/MyApplicationsPage";
 import SettingsPage from "./pages/dashboard/SettingsPage";
 import PrivacyPage from "./pages/PrivacyPage";
 import TermsPage from "./pages/TermsPage";
+import FeedbackPage from "./pages/FeedbackPage";
 
 function LandingRoute() {
   const nav = useNavigate();
@@ -32,6 +33,7 @@ function LandingRoute() {
       onLogin={() => nav("/auth?mode=login")}
       footerLinks={
         <>
+          <Link to="/feedback">Feedback</Link>
           <Link to="/privacy">Privacy Policy</Link>
           <Link to="/terms">Terms of Service</Link>
         </>
@@ -87,6 +89,7 @@ export default function App() {
           <Route path="/logout" element={<LogoutRoute />} />
 
           <Route element={<PublicLayout />}>
+            <Route path="/feedback" element={<FeedbackPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />
             <Route path="/terms" element={<TermsPage />} />
           </Route>
