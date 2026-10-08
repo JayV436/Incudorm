@@ -28,12 +28,12 @@ export default function OnboardingPage() {
   const [hours, setHours] = useState(currentUser?.hoursPerWeek ?? 6);
   const [links, setLinks] = useState(currentUser?.links ?? { github: "", linkedin: "", website: "" });
   const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
   // Set when setup is finished so we always land on the page the student chose.
   const [doneTo, setDoneTo] = useState<string | null>(null);
 
   if (doneTo) return <Navigate to={doneTo} replace />;
   if (!currentUser) return <Navigate to="/auth?mode=login" replace />;
-  if (!currentUser.verified) return <Navigate to="/auth?mode=verify" replace />;
   if (currentUser.onboarded) return <Navigate to="/projects" replace />;
 
   const last = step === STEPS.length - 1;
@@ -47,8 +47,9 @@ export default function OnboardingPage() {
     setStep((s) => s + 1);
   }
 
-  function finish() {
-    updateProfile({
+  async function finish() {
+    setSaving(true);
+    await updateProfile({
       goal,
       college: college.trim(),
       course: course.trim(),
@@ -59,6 +60,7 @@ export default function OnboardingPage() {
       links,
       onboarded: true,
     });
+    setSaving(false);
     setDoneTo(goal === "post" ? "/projects/create" : "/projects");
   }
 
@@ -175,7 +177,9 @@ export default function OnboardingPage() {
                   <button type="button" className="inc-btn inc-btn-ghost" onClick={next}>Skip for now</button>
                 )}
                 {last ? (
-                  <button type="button" className="inc-btn inc-btn-primary" onClick={finish}>Finish setup</button>
+                  <button type="button" className="inc-btn inc-btn-primary" onClick={finish} disabled={saving}>
+                    {saving ? "Saving…" : "Finish setup"}
+                  </button>
                 ) : (
                   <button type="button" className="inc-btn inc-btn-primary" onClick={next}>Continue</button>
                 )}

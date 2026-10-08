@@ -43,26 +43,26 @@ export interface AppContextValue {
   threads: Thread[];
   messages: Message[];
   getUser: (id: string) => Student | undefined;
-  signUp: (input: SignUpInput) => Result<Student>;
-  logIn: (email: string, password: string) => Result<Student>;
-  logOut: () => void;
-  updateProfile: (patch: ProfilePatch) => void;
-  createProject: (input: NewProjectInput) => Result<Project>;
-  setProjectStatus: (projectId: string, status: ProjectStatus) => void;
-  applyToProject: (projectId: string, roleId: string, message: string) => Result<Application>;
-  respondToApplication: (applicationId: string, status: Exclude<ApplicationStatus, "pending">) => void;
-  startThread: (otherUserId: string, projectId?: string | null) => Thread;
-  sendMessage: (threadId: string, text: string) => void;
+  signUp: (input: SignUpInput) => Promise<Result<Student>>;
+  logIn: (email: string, password: string) => Promise<Result<Student>>;
+  logOut: () => void | Promise<void>;
+  updateProfile: (patch: ProfilePatch) => void | Promise<void>;
+  createProject: (input: NewProjectInput) => Promise<Result<Project>>;
+  setProjectStatus: (projectId: string, status: ProjectStatus) => void | Promise<void>;
+  applyToProject: (projectId: string, roleId: string, message: string) => Promise<Result<Application>>;
+  respondToApplication: (applicationId: string, status: Exclude<ApplicationStatus, "pending">) => void | Promise<void>;
+  startThread: (otherUserId: string, projectId?: string | null) => Promise<Thread>;
+  sendMessage: (threadId: string, text: string) => void | Promise<void>;
   /** Checks the 6 digit code and marks the student's email as verified. */
-  verifyEmail: (code: string) => Result<Student>;
+  verifyEmail: (code: string) => Result<Student> | Promise<Result<Student>>;
   /** Issues a new verification code for the signed in student. */
-  resendVerification: () => void;
+  resendVerification: () => void | Promise<void>;
   /** Dev builds only: the code that would have been emailed, so you can test the flow. Always null in production. */
   devVerificationCode: string | null;
   /** Lets an applicant take back a pending application. */
-  withdrawApplication: (applicationId: string) => void;
+  withdrawApplication: (applicationId: string) => void | Promise<void>;
   /** Deletes the signed in student and everything they posted or sent. */
-  deleteAccount: () => void;
+  deleteAccount: () => void | Promise<void>;
 }
 
 export const AppContext = createContext<AppContextValue | null>(null);

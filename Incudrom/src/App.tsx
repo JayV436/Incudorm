@@ -8,6 +8,7 @@ import { DashboardLayout } from "./components/DashboardLayout";
 import { PublicLayout } from "./components/PublicLayout";
 import IncudormLanding from "./pages/IncudormLanding";
 import AuthPage from "./pages/AuthPage";
+import AuthCallbackPage from "./pages/AuthCallbackPage";
 import OnboardingPage from "./pages/OnboardingPage";
 import ProjectFeedPage from "./pages/ProjectFeedPage";
 import ProjectDetailPage from "./pages/ProjectDetailPage";
@@ -81,6 +82,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<LandingRoute />} />
           <Route path="/auth" element={<AuthPage />} />
+          <Route path="/auth/callback" element={<AuthCallbackPage />} />
           <Route path="/onboarding" element={<OnboardingPage />} />
           <Route path="/logout" element={<LogoutRoute />} />
 

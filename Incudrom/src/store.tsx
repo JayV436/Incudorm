@@ -3,95 +3,357 @@ import type { ReactNode } from "react";
 import type { Application, Message, Project, Student, Thread } from "./types";
 import { AppContext } from "./appContext";
 import type { AppContextValue } from "./appContext";
-import { makeCode, makeId } from "./lib/id";
+import { supabase } from "./lib/supabase";
+import type { Session } from "@supabase/supabase-js";
 
 /**
- * Incudorm app store.
+ * Incudorm app store — Supabase edition.
  *
- * Everything starts empty and is kept in the browser's localStorage so the full flow
- * (sign up, post an idea, apply, accept, chat) works with no backend.
- *
- * To connect a real backend (Supabase, Firebase, your own API), keep the same
- * `useApp()` shape and replace the bodies of the actions below with API calls.
- * The pages only talk to `useApp()`, so they won't need to change.
- *
- * NOTE: the local auth here is a placeholder. It does not check or store passwords
- * and it is not secure. Replace signUp/logIn with real auth before launch.
+ * Auth is handled by Supabase Auth (email + password, with email confirmation).
+ * All data lives in Supabase according to schema.sql.
+ * The `useApp()` shape is kept identical to the localStorage version so pages
+ * don't need to change.
  */
 
-const KEY = "incudorm:v1";
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+// ---------------------------------------------------------------------------
+// Row-shape helpers (snake_case DB columns → camelCase app types)
+// ---------------------------------------------------------------------------
 
-interface DB {
+interface ProfileRow {
+  id: string;
+  name: string;
+  college: string;
+  course: string;
+  year: string;
+  bio: string;
+  skills: string[];
+  hours_per_week: number;
+  github: string;
+  linkedin: string;
+  website: string;
+  goal: string;
+  onboarded: boolean;
+  portfolio: { id: string; title: string; description: string; url: string }[];
+  created_at: string;
+}
+
+interface ProjectRow {
+  id: string;
+  owner_id: string;
+  title: string;
+  pitch: string;
+  description: string;
+  stage: string;
+  hours_per_week: number;
+  color: string;
+  status: string;
+  created_at: string;
+  project_roles: { id: string; title: string; skills: string[] }[];
+  project_members: { user_id: string }[];
+}
+
+interface ApplicationRow {
+  id: string;
+  project_id: string;
+  role_id: string | null;
+  applicant_id: string;
+  message: string;
+  status: string;
+  created_at: string;
+}
+
+interface ThreadRow {
+  id: string;
+  project_id: string | null;
+  created_at: string;
+  thread_participants: { user_id: string }[];
+}
+
+interface MessageRow {
+  id: string;
+  thread_id: string;
+  sender_id: string | null;
+  body: string;
+  created_at: string;
+}
+
+function profileToStudent(p: ProfileRow, email: string): Student {
+  return {
+    id: p.id,
+    name: p.name,
+    email,
+    college: p.college,
+    course: p.course,
+    year: p.year,
+    bio: p.bio,
+    skills: p.skills,
+    hoursPerWeek: p.hours_per_week,
+    links: { github: p.github, linkedin: p.linkedin, website: p.website },
+    portfolio: p.portfolio ?? [],
+    verified: true, // Supabase only creates profiles after email confirmation
+    onboarded: p.onboarded,
+    goal: p.goal as Student["goal"],
+    createdAt: p.created_at,
+  };
+}
+
+function projectRowToProject(r: ProjectRow): Project {
+  return {
+    id: r.id,
+    ownerId: r.owner_id,
+    title: r.title,
+    pitch: r.pitch,
+    description: r.description,
+    stage: r.stage as Project["stage"],
+    hoursPerWeek: r.hours_per_week,
+    roles: (r.project_roles ?? []).map((role) => ({
+      id: role.id,
+      title: role.title,
+      skills: role.skills,
+    })),
+    teamIds: (r.project_members ?? []).map((m) => m.user_id),
+    status: r.status as Project["status"],
+    createdAt: r.created_at,
+    color: r.color as Project["color"],
+  };
+}
+
+function appRowToApplication(r: ApplicationRow): Application {
+  return {
+    id: r.id,
+    projectId: r.project_id,
+    roleId: r.role_id ?? "",
+    applicantId: r.applicant_id,
+    message: r.message,
+    status: r.status as Application["status"],
+    createdAt: r.created_at,
+  };
+}
+
+function threadRowToThread(r: ThreadRow): Thread {
+  return {
+    id: r.id,
+    projectId: r.project_id,
+    participantIds: (r.thread_participants ?? []).map((p) => p.user_id),
+    createdAt: r.created_at,
+  };
+}
+
+function msgRowToMessage(r: MessageRow): Message {
+  return {
+    id: r.id,
+    threadId: r.thread_id,
+    senderId: r.sender_id,
+    text: r.body,
+    createdAt: r.created_at,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Provider
+// ---------------------------------------------------------------------------
+
+interface State {
+  session: Session | null;
+  currentUser: Student | null;
   users: Student[];
-  currentUserId: string | null;
   projects: Project[];
   applications: Application[];
   threads: Thread[];
   messages: Message[];
-  /** Pending email verification codes by user id. A real backend emails these instead. */
-  verifications: Record<string, string>;
 }
 
-const EMPTY: DB = {
+const EMPTY_STATE: State = {
+  session: null,
+  currentUser: null,
   users: [],
-  currentUserId: null,
   projects: [],
   applications: [],
   threads: [],
   messages: [],
-  verifications: {},
 };
 
-function load(): DB {
-  try {
-    const raw = localStorage.getItem(KEY);
-    if (!raw) return EMPTY;
-    const saved = JSON.parse(raw) as Partial<DB>;
-    return {
-      ...EMPTY,
-      ...saved,
-      // Accounts saved by an earlier version are treated as verified and onboarded.
-      users: ((saved.users ?? []) as Partial<Student>[]).map(
-        (u) => ({ ...u, verified: u.verified ?? true, onboarded: u.onboarded ?? true, goal: u.goal ?? "both" }) as Student,
-      ),
-    };
-  } catch {
-    return EMPTY;
-  }
-}
-
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [db, setDb] = useState<DB>(load);
-  // The ref always holds the latest state, so actions can return results synchronously.
-  const ref = useRef<DB>(db);
-
-  const commit = useCallback((next: DB) => {
+  const [state, setState] = useState<State>(EMPTY_STATE);
+  const ref = useRef<State>(state);
+  const set = useCallback((next: State) => {
     ref.current = next;
-    setDb(next);
+    setState(next);
   }, []);
 
+  // ---- Auth session bootstrap & listener ---------------------------------
   useEffect(() => {
-    try {
-      localStorage.setItem(KEY, JSON.stringify(db));
-    } catch {
-      /* storage full or blocked: the app keeps working in memory */
-    }
-  }, [db]);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) loadAll(session);
+    });
 
-  const getUser = useCallback((id: string) => ref.current.users.find((u) => u.id === id), []);
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        loadAll(session);
+      } else {
+        set(EMPTY_STATE);
+      }
+    });
 
-  const signUp = useCallback<AppContextValue["signUp"]>((input) => {
-    const cur = ref.current;
-    const email = input.email.trim().toLowerCase();
-    if (!EMAIL_RE.test(email)) return { ok: false, error: "Enter a valid email, like you@college.edu." };
-    if (cur.users.some((u) => u.email === email)) {
-      return { ok: false, error: "An account with this email already exists. Log in instead." };
-    }
-    const user: Student = {
-      id: makeId(),
+    return () => {
+      listener.subscription.unsubscribe();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ---- Load everything for a signed-in session ---------------------------
+  async function loadAll(session: Session) {
+    const uid = session.user.id;
+    const email = session.user.email ?? "";
+
+    const [profilesRes, projectsRes, appsRes, threadsRes, msgsRes] = await Promise.all([
+      supabase
+        .from("profiles")
+        .select("*"),
+      supabase
+        .from("projects")
+        .select("*, project_roles(*), project_members(user_id)")
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("applications")
+        .select("*")
+        .or(`applicant_id.eq.${uid},project_id.in.(${await ownedProjectIds(uid)})`),
+      supabase
+        .from("threads")
+        .select("*, thread_participants(user_id)")
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("messages")
+        .select("*")
+        .order("created_at", { ascending: true }),
+    ]);
+
+    const profileRows = (profilesRes.data ?? []) as ProfileRow[];
+    // We only have the current user's email from the session; other profiles expose no email by design.
+    const users: Student[] = profileRows.map((p) =>
+      profileToStudent(p, p.id === uid ? email : ""),
+    );
+
+    const projects = ((projectsRes.data ?? []) as ProjectRow[]).map(projectRowToProject);
+    const applications = ((appsRes.data ?? []) as ApplicationRow[]).map(appRowToApplication);
+    const threads = ((threadsRes.data ?? []) as ThreadRow[]).map(threadRowToThread);
+    const messages = ((msgsRes.data ?? []) as MessageRow[]).map(msgRowToMessage);
+    const currentUser = users.find((u) => u.id === uid) ?? null;
+
+    set({ session, currentUser, users, projects, applications, threads, messages });
+
+    subscribeRealtime(uid);
+  }
+
+  // Helper: comma-separated list of project IDs owned by uid (for applications query)
+  async function ownedProjectIds(uid: string): Promise<string> {
+    const { data } = await supabase.from("projects").select("id").eq("owner_id", uid);
+    return (data ?? []).map((r: { id: string }) => r.id).join(",") || "null";
+  }
+
+  // ---- Realtime subscriptions --------------------------------------------
+  const realtimeRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+
+  function subscribeRealtime(uid: string) {
+    if (realtimeRef.current) return; // already subscribed
+
+    const channel = supabase
+      .channel("incudorm-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, async (payload) => {
+        if (payload.eventType === "INSERT") {
+          const row = payload.new as MessageRow;
+          // Only show messages in threads the user is part of
+          if (ref.current.threads.some((t) => t.id === row.thread_id)) {
+            setState((prev) => ({
+              ...prev,
+              messages: [...prev.messages, msgRowToMessage(row)],
+            }));
+          }
+        }
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "applications" }, async (payload) => {
+        if (payload.eventType === "INSERT") {
+          const row = payload.new as ApplicationRow;
+          setState((prev) => ({
+            ...prev,
+            applications: [appRowToApplication(row), ...prev.applications],
+          }));
+        }
+        if (payload.eventType === "UPDATE") {
+          const row = payload.new as ApplicationRow;
+          setState((prev) => ({
+            ...prev,
+            applications: prev.applications.map((a) =>
+              a.id === row.id ? appRowToApplication(row) : a,
+            ),
+          }));
+        }
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "projects" }, async () => {
+        // Re-fetch projects with roles and members on any project change
+        const { data } = await supabase
+          .from("projects")
+          .select("*, project_roles(*), project_members(user_id)")
+          .order("created_at", { ascending: false });
+        if (data) {
+          const projects = (data as ProjectRow[]).map(projectRowToProject);
+          setState((prev) => ({ ...prev, projects }));
+        }
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "threads" }, async () => {
+        const { data } = await supabase
+          .from("threads")
+          .select("*, thread_participants(user_id)")
+          .order("created_at", { ascending: false });
+        if (data) {
+          const threads = (data as ThreadRow[]).map(threadRowToThread);
+          setState((prev) => ({ ...prev, threads }));
+        }
+      })
+      .subscribe();
+
+    realtimeRef.current = channel;
+  }
+
+  useEffect(() => {
+    return () => {
+      if (realtimeRef.current) {
+        supabase.removeChannel(realtimeRef.current);
+        realtimeRef.current = null;
+      }
+    };
+  }, []);
+
+  // ---- Actions -----------------------------------------------------------
+
+  const getUser = useCallback(
+    (id: string) => ref.current.users.find((u) => u.id === id),
+    [],
+  );
+
+  const signUp = useCallback<AppContextValue["signUp"]>(async (input) => {
+    const { data, error } = await supabase.auth.signUp({
+      email: input.email.trim().toLowerCase(),
+      password: input.password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        data: {
+          name: input.name.trim(),
+          college: input.college.trim(),
+          course: input.course.trim(),
+          year: input.year,
+        },
+      },
+    });
+    if (error) return { ok: false, error: error.message };
+    if (!data.user) return { ok: false, error: "Sign up failed. Please try again." };
+
+    // Build a provisional Student object while email confirmation is pending.
+    // The DB trigger creates the real profile row after confirmation.
+    const provisional: Student = {
+      id: data.user.id,
       name: input.name.trim(),
-      email,
+      email: input.email.trim().toLowerCase(),
       college: input.college.trim(),
       course: input.course.trim(),
       year: input.year,
@@ -105,226 +367,234 @@ export function AppProvider({ children }: { children: ReactNode }) {
       goal: "both",
       createdAt: new Date().toISOString(),
     };
-    commit({
-      ...cur,
-      users: [...cur.users, user],
-      currentUserId: user.id,
-      verifications: { ...cur.verifications, [user.id]: makeCode() },
+    return { ok: true, value: provisional };
+  }, []);
+
+  const logIn = useCallback<AppContextValue["logIn"]>(async (email, password) => {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: email.trim().toLowerCase(),
+      password,
     });
-    return { ok: true, value: user };
-  }, [commit]);
-
-  const logIn = useCallback<AppContextValue["logIn"]>((email) => {
-    const cur = ref.current;
-    const user = cur.users.find((u) => u.email === email.trim().toLowerCase());
-    if (!user) return { ok: false, error: "No account with this email. Sign up first." };
-    commit({ ...cur, currentUserId: user.id });
-    return { ok: true, value: user };
-  }, [commit]);
-
-  const logOut = useCallback(() => {
-    commit({ ...ref.current, currentUserId: null });
-  }, [commit]);
-
-  const updateProfile = useCallback<AppContextValue["updateProfile"]>((patch) => {
-    const cur = ref.current;
-    if (!cur.currentUserId) return;
-    commit({
-      ...cur,
-      users: cur.users.map((u) => (u.id === cur.currentUserId ? { ...u, ...patch } : u)),
-    });
-  }, [commit]);
-
-  const createProject = useCallback<AppContextValue["createProject"]>((input) => {
-    const cur = ref.current;
-    if (!cur.currentUserId) return { ok: false, error: "Log in to post an idea." };
-    const project: Project = {
-      id: makeId(),
-      ownerId: cur.currentUserId,
-      title: input.title.trim(),
-      pitch: input.pitch.trim(),
-      description: input.description.trim(),
-      stage: input.stage,
-      hoursPerWeek: input.hoursPerWeek,
-      roles: input.roles,
-      teamIds: [],
-      status: "open",
-      createdAt: new Date().toISOString(),
-      color: input.color,
+    if (error) return { ok: false, error: error.message };
+    if (!data.user) return { ok: false, error: "Login failed. Please try again." };
+    // loadAll is triggered by onAuthStateChange; return immediately.
+    const existing = ref.current.currentUser;
+    if (existing) return { ok: true, value: existing };
+    // If the profile hasn't loaded yet, construct a minimal one.
+    const minimal: Student = {
+      id: data.user.id,
+      name: data.user.user_metadata?.name ?? email,
+      email: data.user.email ?? email,
+      college: data.user.user_metadata?.college ?? "",
+      course: data.user.user_metadata?.course ?? "",
+      year: data.user.user_metadata?.year ?? "1st year",
+      bio: "",
+      skills: [],
+      hoursPerWeek: 6,
+      links: { github: "", linkedin: "", website: "" },
+      portfolio: [],
+      verified: !!data.user.email_confirmed_at,
+      onboarded: false,
+      goal: "both",
+      createdAt: data.user.created_at,
     };
-    commit({ ...cur, projects: [project, ...cur.projects] });
-    return { ok: true, value: project };
-  }, [commit]);
+    return { ok: true, value: minimal };
+  }, []);
 
-  const setProjectStatus = useCallback<AppContextValue["setProjectStatus"]>((projectId, status) => {
-    const cur = ref.current;
-    commit({
-      ...cur,
-      projects: cur.projects.map((p) =>
-        p.id === projectId && p.ownerId === cur.currentUserId ? { ...p, status } : p,
+  const logOut = useCallback(async () => {
+    await supabase.auth.signOut();
+    // State is reset by onAuthStateChange.
+  }, []);
+
+  const updateProfile = useCallback<AppContextValue["updateProfile"]>(async (patch) => {
+    const me = ref.current.currentUser;
+    if (!me) return;
+    const dbPatch: Record<string, unknown> = {};
+    if (patch.name !== undefined) dbPatch.name = patch.name;
+    if (patch.college !== undefined) dbPatch.college = patch.college;
+    if (patch.course !== undefined) dbPatch.course = patch.course;
+    if (patch.year !== undefined) dbPatch.year = patch.year;
+    if (patch.bio !== undefined) dbPatch.bio = patch.bio;
+    if (patch.skills !== undefined) dbPatch.skills = patch.skills;
+    if (patch.hoursPerWeek !== undefined) dbPatch.hours_per_week = patch.hoursPerWeek;
+    if (patch.links !== undefined) {
+      dbPatch.github = patch.links.github;
+      dbPatch.linkedin = patch.links.linkedin;
+      dbPatch.website = patch.links.website;
+    }
+    if (patch.portfolio !== undefined) dbPatch.portfolio = patch.portfolio;
+    if (patch.goal !== undefined) dbPatch.goal = patch.goal;
+    if (patch.onboarded !== undefined) dbPatch.onboarded = patch.onboarded;
+
+    await supabase.from("profiles").update(dbPatch).eq("id", me.id);
+    setState((prev) => ({
+      ...prev,
+      currentUser: prev.currentUser ? { ...prev.currentUser, ...patch } : null,
+      users: prev.users.map((u) =>
+        u.id === me.id ? { ...u, ...patch } : u,
       ),
+    }));
+  }, []);
+
+  const createProject = useCallback<AppContextValue["createProject"]>(async (input) => {
+    const rolesPayload = input.roles.map((r) => ({
+      title: r.title,
+      skills: r.skills,
+    }));
+    const { data, error } = await supabase.rpc("create_project", {
+      p_title: input.title,
+      p_pitch: input.pitch,
+      p_description: input.description,
+      p_stage: input.stage,
+      p_hours: input.hoursPerWeek,
+      p_color: input.color ?? "sun",
+      p_roles: rolesPayload,
     });
-  }, [commit]);
+    if (error) return { ok: false, error: error.message };
+    // Re-fetch the new project with roles
+    const { data: row } = await supabase
+      .from("projects")
+      .select("*, project_roles(*), project_members(user_id)")
+      .eq("id", data as string)
+      .single();
+    const project = projectRowToProject(row as ProjectRow);
+    setState((prev) => ({ ...prev, projects: [project, ...prev.projects] }));
+    return { ok: true, value: project };
+  }, []);
 
-  const applyToProject = useCallback<AppContextValue["applyToProject"]>((projectId, roleId, message) => {
-    const cur = ref.current;
-    const me = cur.currentUserId;
-    const project = cur.projects.find((p) => p.id === projectId);
-    if (!me || !project) return { ok: false, error: "This idea no longer exists." };
-    if (project.ownerId === me) return { ok: false, error: "You can't apply to your own idea." };
-    if (project.status !== "open") return { ok: false, error: "This idea isn't taking applications right now." };
-    if (cur.applications.some((a) => a.projectId === projectId && a.applicantId === me)) {
-      return { ok: false, error: "You've already applied to this idea." };
-    }
-    const application: Application = {
-      id: makeId(),
-      projectId,
-      roleId,
-      applicantId: me,
-      message: message.trim(),
-      status: "pending",
-      createdAt: new Date().toISOString(),
-    };
-    commit({ ...cur, applications: [application, ...cur.applications] });
-    return { ok: true, value: application };
-  }, [commit]);
+  const setProjectStatus = useCallback<AppContextValue["setProjectStatus"]>(async (projectId, status) => {
+    await supabase.from("projects").update({ status }).eq("id", projectId);
+    setState((prev) => ({
+      ...prev,
+      projects: prev.projects.map((p) => (p.id === projectId ? { ...p, status } : p)),
+    }));
+  }, []);
 
-  const findOrCreateThread = (cur: DB, a: string, b: string, projectId: string | null): { db: DB; thread: Thread } => {
-    const existing = cur.threads.find(
-      (t) => t.projectId === projectId && t.participantIds.includes(a) && t.participantIds.includes(b),
-    );
-    if (existing) return { db: cur, thread: existing };
-    const thread: Thread = {
-      id: makeId(),
-      participantIds: [a, b],
-      projectId,
-      createdAt: new Date().toISOString(),
-    };
-    return { db: { ...cur, threads: [thread, ...cur.threads] }, thread };
-  };
+  const applyToProject = useCallback<AppContextValue["applyToProject"]>(async (projectId, roleId, message) => {
+    const me = ref.current.currentUser;
+    if (!me) return { ok: false, error: "Log in to apply." };
+    const { data, error } = await supabase
+      .from("applications")
+      .insert({
+        project_id: projectId,
+        role_id: roleId || null,
+        applicant_id: me.id,
+        message: message.trim(),
+        status: "pending",
+      })
+      .select()
+      .single();
+    if (error) return { ok: false, error: error.message };
+    const app = appRowToApplication(data as ApplicationRow);
+    setState((prev) => ({ ...prev, applications: [app, ...prev.applications] }));
+    return { ok: true, value: app };
+  }, []);
 
-  const respondToApplication = useCallback<AppContextValue["respondToApplication"]>((applicationId, status) => {
-    const cur = ref.current;
-    const app = cur.applications.find((a) => a.id === applicationId);
-    if (!app) return;
-    const project = cur.projects.find((p) => p.id === app.projectId);
-    if (!project || project.ownerId !== cur.currentUserId) return;
+  const respondToApplication = useCallback<AppContextValue["respondToApplication"]>(async (applicationId, status) => {
+    await supabase.rpc("respond_to_application", {
+      p_application: applicationId,
+      p_status: status,
+    });
+    // Re-fetch threads, messages, and project members since respond_to_application may have created them.
+    const me = ref.current.currentUser;
+    if (!me) return;
+    const [threadsRes, msgsRes, projectsRes] = await Promise.all([
+      supabase.from("threads").select("*, thread_participants(user_id)").order("created_at", { ascending: false }),
+      supabase.from("messages").select("*").order("created_at", { ascending: true }),
+      supabase.from("projects").select("*, project_roles(*), project_members(user_id)").order("created_at", { ascending: false }),
+    ]);
+    setState((prev) => ({
+      ...prev,
+      applications: prev.applications.map((a) =>
+        a.id === applicationId ? { ...a, status } : a,
+      ),
+      threads: ((threadsRes.data ?? []) as ThreadRow[]).map(threadRowToThread),
+      messages: ((msgsRes.data ?? []) as MessageRow[]).map(msgRowToMessage),
+      projects: ((projectsRes.data ?? []) as ProjectRow[]).map(projectRowToProject),
+    }));
+  }, []);
 
-    let next: DB = {
-      ...cur,
-      applications: cur.applications.map((a) => (a.id === applicationId ? { ...a, status } : a)),
-    };
-
-    if (status === "accepted") {
-      next = {
-        ...next,
-        projects: next.projects.map((p) =>
-          p.id === project.id && !p.teamIds.includes(app.applicantId)
-            ? { ...p, teamIds: [...p.teamIds, app.applicantId] }
-            : p,
-        ),
-      };
-      const { db: withThread, thread } = findOrCreateThread(next, project.ownerId, app.applicantId, project.id);
-      const applicant = cur.users.find((u) => u.id === app.applicantId);
-      const role = project.roles.find((r) => r.id === app.roleId);
-      const note: Message = {
-        id: makeId(),
-        threadId: thread.id,
-        senderId: null,
-        text: `${applicant?.name ?? "A student"} joined ${project.title}${role ? ` as ${role.title}` : ""}. Say hello.`,
-        createdAt: new Date().toISOString(),
-      };
-      next = { ...withThread, messages: [...withThread.messages, note] };
-    }
-    commit(next);
-  }, [commit]);
-
-  const startThread = useCallback<AppContextValue["startThread"]>((otherUserId, projectId = null) => {
-    const cur = ref.current;
-    const me = cur.currentUserId ?? "";
-    const { db: next, thread } = findOrCreateThread(cur, me, otherUserId, projectId);
-    if (next !== cur) commit(next);
+  const startThread = useCallback<AppContextValue["startThread"]>(async (otherUserId, projectId = null) => {
+    const { data, error } = await supabase.rpc("start_thread", {
+      p_other: otherUserId,
+      p_project: projectId ?? null,
+    });
+    if (error) throw new Error(error.message);
+    const threadId = data as string;
+    // Return existing or refetch
+    const existing = ref.current.threads.find((t) => t.id === threadId);
+    if (existing) return existing;
+    const { data: row } = await supabase
+      .from("threads")
+      .select("*, thread_participants(user_id)")
+      .eq("id", threadId)
+      .single();
+    const thread = threadRowToThread(row as ThreadRow);
+    setState((prev) => ({
+      ...prev,
+      threads: [thread, ...prev.threads.filter((t) => t.id !== threadId)],
+    }));
     return thread;
-  }, [commit]);
+  }, []);
 
-  const sendMessage = useCallback<AppContextValue["sendMessage"]>((threadId, text) => {
-    const cur = ref.current;
+  const sendMessage = useCallback<AppContextValue["sendMessage"]>(async (threadId, text) => {
+    const me = ref.current.currentUser;
     const clean = text.trim();
-    if (!cur.currentUserId || !clean) return;
-    const msg: Message = {
-      id: makeId(),
+    if (!me || !clean) return;
+    await supabase.from("messages").insert({
+      thread_id: threadId,
+      sender_id: me.id,
+      body: clean,
+    });
+    // Realtime will push the new message; insert optimistically too for snappiness.
+    const optimistic: Message = {
+      id: crypto.randomUUID(),
       threadId,
-      senderId: cur.currentUserId,
+      senderId: me.id,
       text: clean,
       createdAt: new Date().toISOString(),
     };
-    commit({ ...cur, messages: [...cur.messages, msg] });
-  }, [commit]);
+    setState((prev) => ({ ...prev, messages: [...prev.messages, optimistic] }));
+  }, []);
 
-  const verifyEmail = useCallback<AppContextValue["verifyEmail"]>((code) => {
-    const cur = ref.current;
-    const me = cur.currentUserId;
-    const user = cur.users.find((u) => u.id === me);
-    if (!me || !user) return { ok: false, error: "Log in first." };
-    if (!cur.verifications[me] || cur.verifications[me] !== code.trim()) {
-      return { ok: false, error: "That code isn't right. Check your email and try again." };
+  // Supabase handles email verification natively — these are no-ops now.
+  const verifyEmail = useCallback<AppContextValue["verifyEmail"]>(() => {
+    return { ok: true, value: ref.current.currentUser! };
+  }, []);
+
+  const resendVerification = useCallback<AppContextValue["resendVerification"]>(async () => {
+    const email = ref.current.currentUser?.email;
+    if (email) {
+      await supabase.auth.resend({
+        type: "signup",
+        email,
+        options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      });
     }
-    const verified: Student = { ...user, verified: true };
-    const rest = { ...cur.verifications };
-    delete rest[me];
-    commit({
-      ...cur,
-      users: cur.users.map((u) => (u.id === me ? verified : u)),
-      verifications: rest,
-    });
-    return { ok: true, value: verified };
-  }, [commit]);
+  }, []);
 
-  const resendVerification = useCallback<AppContextValue["resendVerification"]>(() => {
-    const cur = ref.current;
-    if (!cur.currentUserId) return;
-    commit({ ...cur, verifications: { ...cur.verifications, [cur.currentUserId]: makeCode() } });
-  }, [commit]);
+  const withdrawApplication = useCallback<AppContextValue["withdrawApplication"]>(async (applicationId) => {
+    await supabase.from("applications").delete().eq("id", applicationId);
+    setState((prev) => ({
+      ...prev,
+      applications: prev.applications.filter((a) => a.id !== applicationId),
+    }));
+  }, []);
 
-  const withdrawApplication = useCallback<AppContextValue["withdrawApplication"]>((applicationId) => {
-    const cur = ref.current;
-    commit({
-      ...cur,
-      applications: cur.applications.filter(
-        (a) => !(a.id === applicationId && a.applicantId === cur.currentUserId && a.status === "pending"),
-      ),
-    });
-  }, [commit]);
+  const deleteAccount = useCallback<AppContextValue["deleteAccount"]>(async () => {
+    await supabase.rpc("delete_my_account");
+    // onAuthStateChange resets state after deletion.
+  }, []);
 
-  const deleteAccount = useCallback<AppContextValue["deleteAccount"]>(() => {
-    const cur = ref.current;
-    const me = cur.currentUserId;
-    if (!me) return;
-    const myProjectIds = new Set(cur.projects.filter((p) => p.ownerId === me).map((p) => p.id));
-    const myThreadIds = new Set(cur.threads.filter((t) => t.participantIds.includes(me)).map((t) => t.id));
-    const rest = { ...cur.verifications };
-    delete rest[me];
-    commit({
-      users: cur.users.filter((u) => u.id !== me),
-      currentUserId: null,
-      projects: cur.projects
-        .filter((p) => p.ownerId !== me)
-        .map((p) => ({ ...p, teamIds: p.teamIds.filter((t) => t !== me) })),
-      applications: cur.applications.filter((a) => a.applicantId !== me && !myProjectIds.has(a.projectId)),
-      threads: cur.threads.filter((t) => !myThreadIds.has(t.id)),
-      messages: cur.messages.filter((m) => !myThreadIds.has(m.threadId)),
-      verifications: rest,
-    });
-  }, [commit]);
-
+  // ---- Context value -----------------------------------------------------
   const value = useMemo<AppContextValue>(
     () => ({
-      currentUser: db.users.find((u) => u.id === db.currentUserId) ?? null,
-      users: db.users,
-      projects: db.projects,
-      applications: db.applications,
-      threads: db.threads,
-      messages: db.messages,
+      currentUser: state.currentUser,
+      users: state.users,
+      projects: state.projects,
+      applications: state.applications,
+      threads: state.threads,
+      messages: state.messages,
       getUser,
       signUp,
       logIn,
@@ -338,12 +608,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       sendMessage,
       verifyEmail,
       resendVerification,
-      devVerificationCode:
-        import.meta.env.DEV && db.currentUserId ? (db.verifications[db.currentUserId] ?? null) : null,
+      devVerificationCode: null, // Supabase handles verification emails
       withdrawApplication,
       deleteAccount,
     }),
-    [db, getUser, signUp, logIn, logOut, updateProfile, createProject, setProjectStatus, applyToProject, respondToApplication, startThread, sendMessage, verifyEmail, resendVerification, withdrawApplication, deleteAccount],
+    [state, getUser, signUp, logIn, logOut, updateProfile, createProject, setProjectStatus, applyToProject, respondToApplication, startThread, sendMessage, verifyEmail, resendVerification, withdrawApplication, deleteAccount],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
