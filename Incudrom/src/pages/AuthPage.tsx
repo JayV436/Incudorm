@@ -63,17 +63,19 @@ export default function AuthPage() {
       setLoading(true);
       const r = await signUp(form);
       setLoading(false);
-      if (!r.ok) {
-        setError(r.error);
-      } else {
+      if (r.ok) {
         // Supabase has sent a confirmation email. Show the "check your inbox" screen.
         setSentTo(form.email.trim().toLowerCase());
+      } else {
+        setError(r.error);
       }
     } else {
       setLoading(true);
       const r = await logIn(form.email, form.password);
       setLoading(false);
-      if (!r.ok) setError(r.error);
+      if (!r.ok) {
+        setError(r.error);
+      }
       // On success onAuthStateChange fires → currentUser is set → the redirect above handles navigation.
     }
   }

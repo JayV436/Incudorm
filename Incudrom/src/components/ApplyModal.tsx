@@ -25,14 +25,14 @@ function ApplyForm({ project, onDone }: { project: Project; onDone: () => void }
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  function submit(e: FormEvent) {
+  async function submit(e: FormEvent) {
     e.preventDefault();
     setError("");
     if (message.trim().length < 20) {
       setError("Tell the owner a bit more. Write at least 20 characters.");
       return;
     }
-    const r = applyToProject(project.id, roleId, message);
+    const r = await applyToProject(project.id, roleId, message);
     if (!r.ok) setError(r.error);
     else onDone();
   }

@@ -12,7 +12,9 @@ import type {
   Thread,
 } from "./types";
 
-export type Result<T> = { ok: true; value: T } | { ok: false; error: string };
+export type Result<T> =
+  | { ok: true; value: T; error?: undefined }
+  | { ok: false; error: string; value?: undefined };
 
 export interface SignUpInput {
   name: string;
@@ -51,7 +53,7 @@ export interface AppContextValue {
   setProjectStatus: (projectId: string, status: ProjectStatus) => void | Promise<void>;
   applyToProject: (projectId: string, roleId: string, message: string) => Promise<Result<Application>>;
   respondToApplication: (applicationId: string, status: Exclude<ApplicationStatus, "pending">) => void | Promise<void>;
-  startThread: (otherUserId: string, projectId?: string | null) => Promise<Thread>;
+  startThread: (otherUserId: string, projectId?: string | null) => Thread;
   sendMessage: (threadId: string, text: string) => void | Promise<void>;
   /** Checks the 6 digit code and marks the student's email as verified. */
   verifyEmail: (code: string) => Result<Student> | Promise<Result<Student>>;

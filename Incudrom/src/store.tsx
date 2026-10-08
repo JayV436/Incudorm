@@ -242,7 +242,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     set({ session, currentUser, users, projects, applications, threads, messages });
 
-    subscribeRealtime(uid);
+    subscribeRealtime();
   }
 
   // Helper: comma-separated list of project IDs owned by uid (for applications query)
@@ -254,7 +254,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // ---- Realtime subscriptions --------------------------------------------
   const realtimeRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
-  function subscribeRealtime(uid: string) {
+  function subscribeRealtime() {
     if (realtimeRef.current) return; // already subscribed
 
     const channel = supabase
@@ -514,26 +514,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
-  const startThread = useCallback<AppContextValue["startThread"]>(async (otherUserId, projectId = null) => {
-    const { data, error } = await supabase.rpc("start_thread", {
-      p_other: otherUserId,
-      p_project: projectId ?? null,
-    });
-    if (error) throw new Error(error.message);
-    const threadId = data as string;
-    // Return existing or refetch
-    const existing = ref.current.threads.find((t) => t.id === threadId);
+  const startThread = useCallback<AppContextValue["startThread"]>((otherUserId, projectId = null) => {
+    const me = ref.current.currentUser?.id ?? "";
+    const existing = ref.current.threads.find(
+      (t) => (t.projectId ?? null) === (projectId ?? null) &&
+        t.participantIds.includes(me) &&
+        t.participantIds.includes(otherUserId),
+    );
     if (existing) return existing;
-    const { data: row } = await supabase
-      .from("threads")
-      .select("*, thread_participants(user_id)")
-      .eq("id", threadId)
-      .single();
-    const thread = threadRowToThread(row as ThreadRow);
+
+    const thread: Thread = {
+      id: crypto.randomUUID(),
+      projectId: projectId ?? null,
+      participantIds: [me, otherUserId],
+      createdAt: new Date().toISOString(),
+    };
+
     setState((prev) => ({
       ...prev,
-      threads: [thread, ...prev.threads.filter((t) => t.id !== threadId)],
+      threads: [thread, ...prev.threads],
     }));
+
+    void supabase
+      .rpc("start_thread", {
+        p_other: otherUserId,
+        p_project: projectId ?? null,
+      })
+      .then();
+
     return thread;
   }, []);
 

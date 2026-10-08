@@ -32,7 +32,7 @@ export default function CreateProjectPage() {
     setRoles((rs) => rs.map((r) => (r.id === id ? { ...r, ...patch } : r)));
   }
 
-  function submit(e: FormEvent) {
+  async function submit(e: FormEvent) {
     e.preventDefault();
     setError("");
     const cleanRoles = roles
@@ -44,7 +44,7 @@ export default function CreateProjectPage() {
     if (description.trim().length < 30) return setError("Describe your idea in at least 30 characters.");
     if (cleanRoles.length === 0) return setError("Add at least one role you need.");
 
-    const r = createProject({
+    const r = await createProject({
       title,
       pitch,
       description,
