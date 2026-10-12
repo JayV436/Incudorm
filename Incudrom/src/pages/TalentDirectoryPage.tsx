@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useApp } from "../appContext";
 import { Avatar, Chip, EmptyState, PageHead } from "../components/ui";
 import { popFor } from "../lib/format";
+import { USER_COLORS } from "../types";
 
 /** Route: /students */
 export default function TalentDirectoryPage() {
@@ -77,10 +78,12 @@ export default function TalentDirectoryPage() {
         </EmptyState>
       ) : (
         <div className="inc-grid">
-          {filtered.map((u) => (
-            <article className="inc-tcard" key={u.id} style={{ "--pop": popFor(u.id) } as CSSProperties}>
-              <div className="head">
-                <Avatar name={u.name} size={46} />
+          {filtered.map((u) => {
+            const colorObj = u.color ? USER_COLORS.find((c) => c.id === u.color) : null;
+            return (
+              <article className="inc-tcard" key={u.id} style={{ "--pop": colorObj?.value ?? popFor(u.id) } as CSSProperties}>
+                <div className="head">
+                  <Avatar name={u.name} color={u.color} size={46} />
                 <div>
                   <h3>{u.name}</h3>
                   <span className="inc-muted inc-small">
@@ -107,7 +110,8 @@ export default function TalentDirectoryPage() {
                 </button>
               </div>
             </article>
-          ))}
+            );
+          })}
         </div>
       )}
     </>

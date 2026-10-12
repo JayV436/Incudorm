@@ -1,0 +1,9 @@
+{
+  "name": "incudorm",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "npm --prefix Incudrom install && npm --prefix Incudrom run build",
+    "dev": "npm --prefix Incudrom run dev"
+  }
+}

@@ -19,8 +19,40 @@ const CSS = `
   background:var(--inc-bg);color:var(--inc-ink);min-height:100vh;
   font-family:var(--inc-body);font-size:1.0625rem;line-height:1.55;-webkit-font-smoothing:antialiased;
 }
+
+/* Custom App Themes */
+.incudorm[data-theme="midnight"]{
+  --inc-bg:#0B0C1E; --inc-ink:#F1F0FF; --inc-muted:#9F9ED1; --inc-paper:#141530; --inc-line:#2D2F57;
+  --inc-brand:#6366F1; --inc-sun:#FCD34D; --inc-mint:#34D399; --inc-lilac:#A78BFA; --inc-pop-ink:#0B0C1E;
+  --inc-dot:#1D1F42; --inc-chip:#1F2148; --inc-ok:#34D399; --inc-err:#FB7185; --inc-link:#818CF8;
+}
+
+.incudorm[data-theme="cyber"]{
+  --inc-bg:#06080F; --inc-ink:#E2FDF8; --inc-muted:#7FA6A0; --inc-paper:#0E131F; --inc-line:#1D2B3A;
+  --inc-brand:#00E5FF; --inc-sun:#FFE600; --inc-mint:#00FF9D; --inc-lilac:#B388FF; --inc-pop-ink:#06080F;
+  --inc-dot:#132030; --inc-chip:#142332; --inc-ok:#00FF9D; --inc-err:#FF3366; --inc-link:#00E5FF;
+}
+
+.incudorm[data-theme="sunset"]{
+  --inc-bg:#FFF8F0; --inc-ink:#321A11; --inc-muted:#825848; --inc-paper:#FFFFFF; --inc-line:#FCD8BD;
+  --inc-brand:#EA580C; --inc-sun:#F59E0B; --inc-mint:#10B981; --inc-lilac:#F472B6; --inc-pop-ink:#321A11;
+  --inc-dot:#F7CFB2; --inc-chip:#FFEDD5; --inc-ok:#10B981; --inc-err:#EF4444; --inc-link:#C2410C;
+}
+
+.incudorm[data-theme="mint"]{
+  --inc-bg:#F0FDF4; --inc-ink:#0F3323; --inc-muted:#487460; --inc-paper:#FFFFFF; --inc-line:#BBF7D0;
+  --inc-brand:#059669; --inc-sun:#FBBF24; --inc-mint:#10B981; --inc-lilac:#A7F3D0; --inc-pop-ink:#0F3323;
+  --inc-dot:#A7F3D0; --inc-chip:#DCFCE7; --inc-ok:#059669; --inc-err:#E11D48; --inc-link:#047857;
+}
+
+.incudorm[data-theme="lavender"]{
+  --inc-bg:#FAF5FF; --inc-ink:#271439; --inc-muted:#6E5484; --inc-paper:#FFFFFF; --inc-line:#E9D5FF;
+  --inc-brand:#9333EA; --inc-sun:#FDE047; --inc-mint:#6EE7B7; --inc-lilac:#C084FC; --inc-pop-ink:#271439;
+  --inc-dot:#DDD6FE; --inc-chip:#F3E8FF; --inc-ok:#10B981; --inc-err:#F43F5E; --inc-link:#7E22CE;
+}
+
 @media (prefers-color-scheme:dark){
-  .incudorm{
+  .incudorm:not([data-theme]){
     --inc-bg:#0E0E26; --inc-ink:#F1F0FF; --inc-muted:#A8A7D2; --inc-paper:#1A1A44; --inc-line:#34346E;
     --inc-dot:#25254F; --inc-chip:#25255A; --inc-ok:#46E0A0; --inc-err:#FF8FA3; --inc-link:#9C9CFF;
   }
@@ -142,6 +174,90 @@ const CSS = `
 .incudorm .inc-pcard-foot{margin-top:auto;display:flex;align-items:center;justify-content:space-between;gap:.6rem;font-size:.9rem;color:var(--inc-muted)}
 .incudorm .inc-pcard-foot .who{display:flex;align-items:center;gap:.5rem;min-width:0}
 .incudorm .inc-pcard-foot b{color:var(--inc-ink);font-weight:600;display:block;line-height:1.2}
+
+/* Card Themes */
+.incudorm .inc-pcard.inc-card-theme-brutalist{border-width:3.5px;box-shadow:7px 7px 0 var(--inc-ink)}
+.incudorm a.inc-pcard.inc-card-theme-brutalist:hover{transform:translate(-3px,-3px) rotate(var(--tilt,0deg));box-shadow:10px 10px 0 var(--inc-ink)}
+.incudorm .inc-pcard.inc-card-theme-brutalist .inc-pcard-top{border-bottom:3px solid var(--inc-ink);letter-spacing:.02em}
+
+.incudorm .inc-pcard.inc-card-theme-gradient .inc-pcard-top{background:linear-gradient(135deg,var(--pop),#6366F1);color:#fff;border-bottom:2px solid var(--inc-ink)}
+.incudorm .inc-pcard.inc-card-theme-gradient{box-shadow:0 4px 20px rgba(59,59,255,.14),5px 5px 0 var(--inc-ink)}
+
+.incudorm .inc-pcard.inc-card-theme-pastel{background:color-mix(in srgb,var(--pop) 10%,var(--inc-paper));border-radius:24px}
+.incudorm .inc-pcard.inc-card-theme-pastel .inc-pcard-top{background:color-mix(in srgb,var(--pop) 35%,var(--inc-paper));border-bottom:2px solid var(--inc-ink)}
+
+.incudorm .inc-pcard.inc-card-theme-cyber{background:#0E1022;color:#EDF2F7;border-color:var(--pop);box-shadow:0 0 16px color-mix(in srgb,var(--pop) 30%,transparent),5px 5px 0 #000}
+.incudorm .inc-pcard.inc-card-theme-cyber .inc-pcard-top{background:#171936;color:var(--pop);border-bottom:2px solid var(--pop)}
+.incudorm .inc-pcard.inc-card-theme-cyber .pitch{color:#A0AEC0}
+
+.incudorm .inc-pcard.inc-card-theme-editorial{border-radius:14px;background:var(--inc-paper)}
+.incudorm .inc-pcard.inc-card-theme-editorial .inc-pcard-top{background:var(--inc-chip);border-bottom:2px dashed var(--inc-ink);color:var(--inc-ink)}
+
+/* Visibility pills & tags */
+.incudorm .inc-vis-pill{
+  display:inline-flex;align-items:center;gap:.25rem;border-radius:999px;padding:.15rem .55rem;
+  font-size:.76rem;font-weight:700;letter-spacing:.02em;text-transform:uppercase;border:1.5px solid currentColor;
+}
+.incudorm .inc-vis-pill.private{background:#2E1065;color:#DDD6FE;border-color:#7C3AED}
+.incudorm .inc-vis-pill.campus{background:#FEF3C7;color:#92400E;border-color:#F59E0B}
+.incudorm .inc-vis-pill.everyone{background:#DCFCE7;color:#166534;border-color:#22C55E}
+
+/* Visibility feed tabs */
+.incudorm .inc-vis-tabs{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1.5rem;border-bottom:2px solid var(--inc-line);padding-bottom:.8rem}
+.incudorm .inc-vis-tab{
+  font:600 .95rem var(--inc-body);color:var(--inc-muted);background:var(--inc-paper);border:2px solid var(--inc-line);
+  border-radius:999px;padding:.45rem 1rem;cursor:pointer;display:inline-flex;align-items:center;gap:.4rem;transition:all .15s ease;
+}
+.incudorm .inc-vis-tab:hover{color:var(--inc-ink);border-color:var(--inc-ink)}
+.incudorm .inc-vis-tab.active{background:var(--inc-ink);color:var(--inc-bg);border-color:var(--inc-ink)}
+.incudorm .inc-vis-tab .count{
+  display:inline-grid;place-items:center;min-width:1.3rem;height:1.3rem;padding:0 .3rem;border-radius:999px;
+  background:var(--inc-sun);color:var(--inc-pop-ink);font-size:.75rem;font-weight:800;
+}
+.incudorm .inc-vis-tab.active .count{background:var(--inc-bg);color:var(--inc-ink)}
+
+/* Feed Sections */
+.incudorm .inc-feed-sections{display:grid;gap:2.75rem}
+.incudorm .inc-feed-section{display:grid;gap:1.35rem}
+.incudorm .inc-feed-sec-head{display:flex;align-items:flex-end;justify-content:space-between;gap:1rem;flex-wrap:wrap;border-bottom:2px solid var(--inc-line);padding-bottom:.8rem}
+.incudorm .inc-feed-sec-head .sec-title-wrap{display:flex;align-items:center;gap:.75rem}
+.incudorm .inc-feed-sec-head .sec-icon{font-size:1.8rem;line-height:1}
+.incudorm .inc-feed-sec-head h2{font-size:1.6rem;margin:0}
+.incudorm .inc-feed-sec-head p{color:var(--inc-muted);font-size:.92rem;margin-top:.15rem}
+.incudorm .inc-sec-tag{font:700 .82rem var(--inc-body);border-radius:999px;padding:.3rem .75rem;border:1.5px solid var(--inc-ink)}
+.incudorm .inc-sec-tag.private{background:#2E1065;color:#E9D5FF;border-color:#7C3AED}
+.incudorm .inc-sec-tag.campus{background:#FEF3C7;color:#92400E;border-color:#F59E0B}
+.incudorm .inc-sec-tag.everyone{background:#DCFCE7;color:#166534;border-color:#22C55E}
+
+.incudorm .inc-empty-sec{border:2px dashed var(--inc-line);border-radius:16px;padding:1.6rem;text-align:center;color:var(--inc-muted);display:flex;flex-direction:column;align-items:center;gap:.75rem}
+
+/* Visibility Selector in Create Form */
+.incudorm .inc-vis-selector{display:grid;gap:.8rem;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.incudorm .inc-vis-option{
+  display:flex;gap:.8rem;align-items:flex-start;border:2px solid var(--inc-line);border-radius:14px;
+  padding:.9rem 1rem;background:var(--inc-paper);cursor:pointer;position:relative;transition:all .15s ease;
+}
+.incudorm .inc-vis-option input{position:absolute;opacity:0}
+.incudorm .inc-vis-option:hover{border-color:var(--inc-ink)}
+.incudorm .inc-vis-option.selected{border-color:var(--inc-ink);background:var(--inc-chip);box-shadow:4px 4px 0 var(--inc-ink)}
+.incudorm .inc-vis-option .vis-icon{font-size:1.6rem;line-height:1}
+.incudorm .inc-vis-option .vis-info strong{display:block;font-size:1rem;margin-bottom:.2rem}
+.incudorm .inc-vis-option .vis-info span{display:block;font-size:.84rem;color:var(--inc-muted);line-height:1.35}
+
+/* Themes Grid in Create Form and Profile */
+.incudorm .inc-themes-grid{display:grid;gap:.7rem;grid-template-columns:repeat(auto-fill,minmax(180px,1fr))}
+.incudorm .inc-theme-btn{
+  border:2px solid var(--inc-line);border-radius:12px;padding:.75rem .9rem;background:var(--inc-paper);
+  color:var(--inc-ink);text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:.2rem;transition:all .15s ease;
+}
+.incudorm .inc-theme-btn:hover{border-color:var(--inc-ink)}
+.incudorm .inc-theme-btn.active{border-color:var(--inc-ink);background:var(--inc-chip);box-shadow:3px 3px 0 var(--inc-ink)}
+.incudorm .inc-theme-btn .name{font-weight:700;font-size:.95rem}
+.incudorm .inc-theme-btn .desc{font-size:.8rem;color:var(--inc-muted);line-height:1.3}
+
+/* Quick theme selector in nav */
+.incudorm .inc-theme-quick-select{font:600 .88rem var(--inc-body);color:var(--inc-ink);background:var(--inc-chip);border:2px solid var(--inc-line);border-radius:999px;padding:.35rem .75rem;cursor:pointer;outline:none}
+.incudorm .inc-theme-quick-select:hover{border-color:var(--inc-ink)}
 .incudorm .inc-tcard{display:flex;flex-direction:column;gap:.8rem;background:var(--inc-paper);border:2px solid var(--inc-line);border-left:8px solid var(--pop);border-radius:14px;padding:1.2rem}
 .incudorm .inc-tcard .head{display:flex;gap:.8rem;align-items:center}
 .incudorm .inc-tcard h3{font-size:1.2rem;margin:0}

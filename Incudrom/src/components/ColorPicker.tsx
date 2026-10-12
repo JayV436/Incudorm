@@ -1,23 +1,32 @@
 import type { CSSProperties } from "react";
 import { CARD_COLORS } from "../types";
-import type { CardColor } from "../types";
 
-/** Swatches for choosing an idea card color. Keyboard accessible: arrow keys move between swatches. */
-export function ColorPicker({
+export interface ColorOption<T extends string = string> {
+  id: T;
+  label: string;
+  value: string;
+}
+
+/** Swatches for choosing a color. Keyboard accessible: arrow keys move between swatches. */
+export function ColorPicker<T extends string = string>({
   value,
   onChange,
-  name = "card-color",
+  colors = CARD_COLORS as unknown as readonly ColorOption<T>[],
+  name = "color-picker",
+  hint = "This color personalizes your item.",
 }: {
-  value: CardColor;
-  onChange: (next: CardColor) => void;
+  value: T;
+  onChange: (next: T) => void;
+  colors?: readonly ColorOption<T>[] | ColorOption<T>[];
   name?: string;
+  hint?: string;
 }) {
-  const selected = CARD_COLORS.find((c) => c.id === value);
+  const selected = colors.find((c) => c.id === value);
 
   return (
     <div>
-      <div className="inc-colors" role="radiogroup" aria-label="Card color">
-        {CARD_COLORS.map((c) => (
+      <div className="inc-colors" role="radiogroup" aria-label={name}>
+        {colors.map((c) => (
           <label className="inc-swatch" key={c.id} title={c.label} style={{ "--c": c.value } as CSSProperties}>
             <input
               type="radio"
@@ -36,7 +45,7 @@ export function ColorPicker({
         ))}
       </div>
       <p className="inc-hint" style={{ marginTop: ".5rem" }}>
-        Selected: {selected?.label}. This color shows on your idea card.
+        Selected: <strong>{selected?.label ?? value}</strong>. {hint}
       </p>
     </div>
   );

@@ -8,11 +8,13 @@ import { ShareModal } from "../components/ShareModal";
 import { Avatar, Chip, EmptyState } from "../components/ui";
 import { popFor, timeAgo } from "../lib/format";
 
+import type { ProjectVisibility } from "../types";
+
 /** Route: /projects/:id. Idea details, the apply modal, and (for the owner) incoming requests. */
 export default function ProjectDetailPage() {
   const { id } = useParams();
   const nav = useNavigate();
-  const { projects, applications, currentUser, getUser, setProjectStatus, startThread } = useApp();
+  const { projects, applications, currentUser, getUser, setProjectStatus, setProjectVisibility, startThread } = useApp();
   const [applyOpen, setApplyOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
 
@@ -46,12 +48,18 @@ export default function ProjectDetailPage() {
   }
 
   const pop = { "--pop": popFor(project.id) } as CSSProperties;
+  const vis = project.visibility || "everyone";
 
   return (
     <div className="inc-detail">
       <div className="inc-stack">
         <div>
           <div className="inc-chips" style={{ marginBottom: "1rem", alignItems: "center" }}>
+            <span className={`inc-vis-pill ${vis}`}>
+              {vis === "private" && "Private (Only you)"}
+              {vis === "campus" && `Campus (${owner?.college || "Same campus"})`}
+              {vis === "everyone" && "Everyone"}
+            </span>
             <Chip tone="sun">{project.stage}</Chip>
             <Chip>{project.hoursPerWeek} hrs/week</Chip>
             <Chip>Posted {timeAgo(project.createdAt)}</Chip>
@@ -77,7 +85,7 @@ export default function ProjectDetailPage() {
           <p className="inc-pitchline">{project.pitch}</p>
           {owner && (
             <Link to={`/profile/${owner.id}`} className="inc-member" style={{ padding: 0 }}>
-              <Avatar name={owner.name} size={40} />
+              <Avatar name={owner.name} color={owner.color} size={40} />
               <span>
                 <b>{owner.name}</b>
                 <span className="inc-muted inc-small">
@@ -130,7 +138,7 @@ export default function ProjectDetailPage() {
         {isOwner ? (
           <div className="inc-card ink">
             <h3>Your idea</h3>
-            <p className="inc-muted" style={{ marginBottom: "1rem" }}>
+            <p className="inc-muted" style={{ marginBottom: ".8rem" }}>
               {project.status === "open"
                 ? "Students can apply right now."
                 : "Applications are closed. Nobody new can apply."}
@@ -138,10 +146,26 @@ export default function ProjectDetailPage() {
             <button
               type="button"
               className="inc-btn inc-btn-ghost inc-btn-block"
+              style={{ marginBottom: "1rem" }}
               onClick={() => setProjectStatus(project.id, project.status === "open" ? "closed" : "open")}
             >
               {project.status === "open" ? "Close applications" : "Reopen applications"}
             </button>
+
+            <div className="inc-field" style={{ marginBottom: 0 }}>
+              <label className="inc-label" htmlFor="owner-vis-select">Idea visibility</label>
+              <select
+                id="owner-vis-select"
+                className="inc-select"
+                value={project.visibility || "everyone"}
+                onChange={(e) => setProjectVisibility(project.id, e.target.value as ProjectVisibility)}
+              >
+                <option value="private">Private (Only you)</option>
+                <option value="campus">Campus Only ({currentUser.college || "Your Campus"})</option>
+                <option value="everyone">Everyone (Global)</option>
+              </select>
+              <span className="inc-hint">Changes who can find and apply to this idea.</span>
+            </div>
           </div>
         ) : onTeam ? (
           <div className="inc-card ink">
@@ -188,7 +212,7 @@ export default function ProjectDetailPage() {
           <h3>Team</h3>
           {owner && (
             <Link className="inc-member" to={`/profile/${owner.id}`}>
-              <Avatar name={owner.name} size={36} />
+              <Avatar name={owner.name} color={owner.color} size={36} />
               <span>
                 <b>{owner.name}</b>
                 <span className="inc-muted inc-small">Owner</span>
@@ -200,7 +224,7 @@ export default function ProjectDetailPage() {
             if (!m) return null;
             return (
               <Link className="inc-member" to={`/profile/${m.id}`} key={tid}>
-                <Avatar name={m.name} size={36} />
+                <Avatar name={m.name} color={m.color} size={36} />
                 <span>
                   <b>{m.name}</b>
                   <span className="inc-muted inc-small">Teammate</span>

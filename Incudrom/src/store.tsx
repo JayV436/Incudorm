@@ -1,19 +1,81 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import type { Application, Message, Project, Student, Thread } from "./types";
+import type {
+  AppTheme,
+  Application,
+  CardColor,
+  CardTheme,
+  Message,
+  Project,
+  ProjectVisibility,
+  Student,
+  Thread,
+  UserColor,
+} from "./types";
 import { AppContext } from "./appContext";
 import type { AppContextValue } from "./appContext";
 import { supabase } from "./lib/supabase";
 import type { Session } from "@supabase/supabase-js";
 
 /**
- * Incudorm app store — Supabase edition.
+ * Incudorm app store — Supabase edition with local enhancement layer.
  *
  * Auth is handled by Supabase Auth (email + password, with email confirmation).
  * All data lives in Supabase according to schema.sql.
- * The `useApp()` shape is kept identical to the localStorage version so pages
- * don't need to change.
  */
+
+// ---------------------------------------------------------------------------
+// Local metadata persistence (for visibility, cardTheme, userColor, appTheme)
+// ---------------------------------------------------------------------------
+
+const PROJECT_META_KEY = "incudorm_project_meta";
+const USER_META_KEY = "incudorm_user_meta";
+export const APP_THEME_KEY = "incudorm_app_theme";
+
+interface ProjectMeta {
+  visibility?: ProjectVisibility;
+  cardTheme?: CardTheme;
+  color?: CardColor;
+}
+
+interface UserMeta {
+  color?: UserColor;
+  theme?: AppTheme;
+}
+
+function getStoredProjectMeta(): Record<string, ProjectMeta> {
+  try {
+    const raw = localStorage.getItem(PROJECT_META_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveStoredProjectMeta(id: string, meta: ProjectMeta) {
+  try {
+    const all = getStoredProjectMeta();
+    all[id] = { ...all[id], ...meta };
+    localStorage.setItem(PROJECT_META_KEY, JSON.stringify(all));
+  } catch {}
+}
+
+function getStoredUserMeta(): Record<string, UserMeta> {
+  try {
+    const raw = localStorage.getItem(USER_META_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveStoredUserMeta(id: string, meta: UserMeta) {
+  try {
+    const all = getStoredUserMeta();
+    all[id] = { ...all[id], ...meta };
+    localStorage.setItem(USER_META_KEY, JSON.stringify(all));
+  } catch {}
+}
 
 // ---------------------------------------------------------------------------
 // Row-shape helpers (snake_case DB columns → camelCase app types)
@@ -35,6 +97,8 @@ interface ProfileRow {
   onboarded: boolean;
   portfolio: { id: string; title: string; description: string; url: string }[];
   created_at: string;
+  user_color?: string;
+  app_theme?: string;
 }
 
 interface ProjectRow {
@@ -50,6 +114,8 @@ interface ProjectRow {
   created_at: string;
   project_roles: { id: string; title: string; skills: string[] }[];
   project_members: { user_id: string }[];
+  visibility?: string;
+  card_theme?: string;
 }
 
 interface ApplicationRow {
@@ -78,6 +144,7 @@ interface MessageRow {
 }
 
 function profileToStudent(p: ProfileRow, email: string): Student {
+  const meta = getStoredUserMeta()[p.id] ?? {};
   return {
     id: p.id,
     name: p.name,
@@ -94,10 +161,13 @@ function profileToStudent(p: ProfileRow, email: string): Student {
     onboarded: p.onboarded,
     goal: p.goal as Student["goal"],
     createdAt: p.created_at,
+    color: (p.user_color as UserColor) || meta.color || "sun",
+    theme: (p.app_theme as AppTheme) || meta.theme || "classic",
   };
 }
 
 function projectRowToProject(r: ProjectRow): Project {
+  const meta = getStoredProjectMeta()[r.id] ?? {};
   return {
     id: r.id,
     ownerId: r.owner_id,
@@ -114,7 +184,9 @@ function projectRowToProject(r: ProjectRow): Project {
     teamIds: (r.project_members ?? []).map((m) => m.user_id),
     status: r.status as Project["status"],
     createdAt: r.created_at,
-    color: r.color as Project["color"],
+    color: ((meta.color || r.color) as Project["color"]) || "sun",
+    cardTheme: (r.card_theme as CardTheme) || meta.cardTheme || "classic",
+    visibility: (r.visibility as ProjectVisibility) || meta.visibility || "everyone",
   };
 }
 
@@ -239,6 +311,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const threads = ((threadsRes.data ?? []) as ThreadRow[]).map(threadRowToThread);
     const messages = ((msgsRes.data ?? []) as MessageRow[]).map(msgRowToMessage);
     const currentUser = users.find((u) => u.id === uid) ?? null;
+    if (currentUser?.theme) {
+      setAppThemeState(currentUser.theme);
+    }
 
     set({ session, currentUser, users, projects, applications, threads, messages });
 
@@ -406,9 +481,39 @@ export function AppProvider({ children }: { children: ReactNode }) {
     // State is reset by onAuthStateChange.
   }, []);
 
+  const [appTheme, setAppThemeState] = useState<AppTheme>(() => {
+    try {
+      const saved = localStorage.getItem(APP_THEME_KEY);
+      if (saved) return saved as AppTheme;
+    } catch {}
+    return "classic";
+  });
+
+  const setAppTheme = useCallback((theme: AppTheme) => {
+    setAppThemeState(theme);
+    try {
+      localStorage.setItem(APP_THEME_KEY, theme);
+    } catch {}
+    const me = ref.current.currentUser;
+    if (me) {
+      saveStoredUserMeta(me.id, { theme });
+      void supabase.from("profiles").update({ app_theme: theme } as Record<string, unknown>).eq("id", me.id).then();
+    }
+  }, []);
+
   const updateProfile = useCallback<AppContextValue["updateProfile"]>(async (patch) => {
     const me = ref.current.currentUser;
     if (!me) return;
+    if (patch.color) {
+      saveStoredUserMeta(me.id, { color: patch.color });
+    }
+    if (patch.theme) {
+      saveStoredUserMeta(me.id, { theme: patch.theme });
+      setAppThemeState(patch.theme);
+      try {
+        localStorage.setItem(APP_THEME_KEY, patch.theme);
+      } catch {}
+    }
     const dbPatch: Record<string, unknown> = {};
     if (patch.name !== undefined) dbPatch.name = patch.name;
     if (patch.college !== undefined) dbPatch.college = patch.college;
@@ -425,8 +530,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (patch.portfolio !== undefined) dbPatch.portfolio = patch.portfolio;
     if (patch.goal !== undefined) dbPatch.goal = patch.goal;
     if (patch.onboarded !== undefined) dbPatch.onboarded = patch.onboarded;
+    if (patch.color !== undefined) dbPatch.user_color = patch.color;
+    if (patch.theme !== undefined) dbPatch.app_theme = patch.theme;
 
-    await supabase.from("profiles").update(dbPatch).eq("id", me.id);
+    void supabase.from("profiles").update(dbPatch).eq("id", me.id).then();
     setState((prev) => ({
       ...prev,
       currentUser: prev.currentUser ? { ...prev.currentUser, ...patch } : null,
@@ -441,25 +548,79 @@ export function AppProvider({ children }: { children: ReactNode }) {
       title: r.title,
       skills: r.skills,
     }));
+    const chosenColor = input.color ?? "sun";
+    const chosenTheme = input.cardTheme ?? "classic";
+    const chosenVisibility = input.visibility ?? "everyone";
+
     const { data, error } = await supabase.rpc("create_project", {
       p_title: input.title,
       p_pitch: input.pitch,
       p_description: input.description,
       p_stage: input.stage,
       p_hours: input.hoursPerWeek,
-      p_color: input.color ?? "sun",
+      p_color: chosenColor,
       p_roles: rolesPayload,
     });
     if (error) return { ok: false, error: error.message };
+
+    const projectId = data as string;
+    saveStoredProjectMeta(projectId, {
+      color: chosenColor,
+      cardTheme: chosenTheme,
+      visibility: chosenVisibility,
+    });
+    void supabase
+      .from("projects")
+      .update({ visibility: chosenVisibility, card_theme: chosenTheme } as Record<string, unknown>)
+      .eq("id", projectId)
+      .then();
+
     // Re-fetch the new project with roles
     const { data: row } = await supabase
       .from("projects")
       .select("*, project_roles(*), project_members(user_id)")
-      .eq("id", data as string)
+      .eq("id", projectId)
       .single();
-    const project = projectRowToProject(row as ProjectRow);
+
+    let project: Project;
+    if (row) {
+      project = projectRowToProject(row as ProjectRow);
+      project.color = chosenColor;
+      project.cardTheme = chosenTheme;
+      project.visibility = chosenVisibility;
+    } else {
+      project = {
+        id: projectId,
+        ownerId: ref.current.currentUser?.id ?? "",
+        title: input.title,
+        pitch: input.pitch,
+        description: input.description,
+        stage: input.stage,
+        hoursPerWeek: input.hoursPerWeek,
+        roles: input.roles,
+        teamIds: [],
+        status: "open",
+        createdAt: new Date().toISOString(),
+        color: chosenColor,
+        cardTheme: chosenTheme,
+        visibility: chosenVisibility,
+      };
+    }
     setState((prev) => ({ ...prev, projects: [project, ...prev.projects] }));
     return { ok: true, value: project };
+  }, []);
+
+  const setProjectVisibility = useCallback<AppContextValue["setProjectVisibility"]>(async (projectId, visibility) => {
+    saveStoredProjectMeta(projectId, { visibility });
+    void supabase
+      .from("projects")
+      .update({ visibility } as Record<string, unknown>)
+      .eq("id", projectId)
+      .then();
+    setState((prev) => ({
+      ...prev,
+      projects: prev.projects.map((p) => (p.id === projectId ? { ...p, visibility } : p)),
+    }));
   }, []);
 
   const setProjectStatus = useCallback<AppContextValue["setProjectStatus"]>(async (projectId, status) => {
@@ -603,6 +764,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       applications: state.applications,
       threads: state.threads,
       messages: state.messages,
+      appTheme,
+      setAppTheme,
       getUser,
       signUp,
       logIn,
@@ -610,6 +773,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       updateProfile,
       createProject,
       setProjectStatus,
+      setProjectVisibility,
       applyToProject,
       respondToApplication,
       startThread,
@@ -620,7 +784,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       withdrawApplication,
       deleteAccount,
     }),
-    [state, getUser, signUp, logIn, logOut, updateProfile, createProject, setProjectStatus, applyToProject, respondToApplication, startThread, sendMessage, verifyEmail, resendVerification, withdrawApplication, deleteAccount],
+    [state, appTheme, setAppTheme, getUser, signUp, logIn, logOut, updateProfile, createProject, setProjectStatus, setProjectVisibility, applyToProject, respondToApplication, startThread, sendMessage, verifyEmail, resendVerification, withdrawApplication, deleteAccount],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

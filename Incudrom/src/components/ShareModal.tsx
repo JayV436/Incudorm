@@ -140,7 +140,7 @@ export function ShareModal({ project, open, onClose }: Props) {
               style={{ minWidth: "115px", whiteSpace: "nowrap" }}
               onClick={handleCopy}
             >
-              {copied ? "Copied! ✓" : "Copy link"}
+              {copied ? "Copied!" : "Copy link"}
             </button>
           </div>
         </div>

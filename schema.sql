@@ -41,6 +41,8 @@ create table if not exists public.profiles (
   onboarded      boolean     not null default false,
   portfolio      jsonb       not null default '[]'
                  check (jsonb_typeof(portfolio) = 'array' and jsonb_array_length(portfolio) <= 20),
+  user_color     text        not null default 'sun',
+  app_theme      text        not null default 'classic',
   created_at     timestamptz not null default now()
 );
 
@@ -52,8 +54,9 @@ create table if not exists public.projects (
   description    text        not null check (char_length(description) between 30 and 5000),
   stage          text        not null check (stage in ('Just an idea', 'Prototype', 'Validating', 'Building')),
   hours_per_week int         not null check (hours_per_week between 1 and 60),
-  color          text        not null default 'sun'
-                 check (color in ('sun', 'mint', 'lilac', 'pink', 'sky', 'orange', 'lime', 'coral')),
+  color          text        not null default 'sun',
+  card_theme     text        not null default 'classic',
+  visibility     text        not null default 'everyone' check (visibility in ('private', 'campus', 'everyone')),
   status         text        not null default 'open' check (status in ('open', 'closed')),
   created_at     timestamptz not null default now()
 );
@@ -633,4 +636,12 @@ create policy "anyone can submit feedback" on public.feedback
   for insert to anon, authenticated with check (true);
 
 grant insert on public.feedback to anon, authenticated;
+
+-- ---------------------------------------------------------------------
+-- 9. Safe migrations for visibility, card themes, and user personalization
+-- ---------------------------------------------------------------------
+alter table if exists public.projects add column if not exists visibility text not null default 'everyone';
+alter table if exists public.projects add column if not exists card_theme text not null default 'classic';
+alter table if exists public.profiles add column if not exists user_color text not null default 'sun';
+alter table if exists public.profiles add column if not exists app_theme text not null default 'classic';
 

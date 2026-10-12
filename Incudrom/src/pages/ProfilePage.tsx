@@ -22,7 +22,20 @@ export default function ProfilePage() {
   }
 
   const isMe = student.id === currentUser?.id;
-  const ideas = projects.filter((p) => p.ownerId === student.id && (isMe || p.status === "open"));
+  const isSameCampus =
+    !!currentUser?.college &&
+    currentUser.college.trim().toLowerCase() === student.college.trim().toLowerCase();
+
+  const ideas = projects.filter((p) => {
+    if (p.ownerId !== student.id) return false;
+    if (isMe) return true;
+    if (p.status !== "open") return false;
+    const vis = p.visibility || "everyone";
+    if (vis === "private") return false;
+    if (vis === "campus") return isSameCampus;
+    return true;
+  });
+
   const links = [
     { label: "GitHub", url: safeUrl(student.links.github) },
     { label: "LinkedIn", url: safeUrl(student.links.linkedin) },
@@ -39,7 +52,7 @@ export default function ProfilePage() {
     <>
       <section className="inc-card ink">
         <div className="inc-profile-head">
-          <Avatar name={student.name} size={84} />
+          <Avatar name={student.name} color={student.color} size={84} />
           <div>
             <h1>{student.name}</h1>
             <p className="inc-muted" style={{ marginTop: ".3rem" }}>

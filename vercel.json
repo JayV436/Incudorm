@@ -1,0 +1,10 @@
+{
+  "buildCommand": "cd Incudrom && npm install && npm run build",
+  "outputDirectory": "Incudrom/dist",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}

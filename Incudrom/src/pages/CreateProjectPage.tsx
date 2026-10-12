@@ -6,8 +6,8 @@ import { makeId } from "../lib/id";
 import { ProjectCard } from "../components/ProjectCard";
 import { ColorPicker } from "../components/ColorPicker";
 import { Field, PageHead, SkillPicker } from "../components/ui";
-import { HOURS_OPTIONS, STAGES, CARD_COLORS } from "../types";
-import type { Project, RoleNeed, Stage, CardColor } from "../types";
+import { HOURS_OPTIONS, STAGES, CARD_COLORS, CARD_THEMES } from "../types";
+import type { Project, RoleNeed, Stage, CardColor, CardTheme, ProjectVisibility } from "../types";
 
 const MAX_ROLES = 6;
 const newRole = (): RoleNeed => ({ id: makeId(), title: "", skills: [] });
@@ -24,6 +24,8 @@ export default function CreateProjectPage() {
   const [hoursPerWeek, setHoursPerWeek] = useState<number>(6);
   const [roles, setRoles] = useState<RoleNeed[]>(() => [newRole()]);
   const [color, setColor] = useState<CardColor>(CARD_COLORS[0].id);
+  const [cardTheme, setCardTheme] = useState<CardTheme>(CARD_THEMES[0].id);
+  const [visibility, setVisibility] = useState<ProjectVisibility>("campus");
   const [error, setError] = useState("");
   // Created once so the preview card has a stable timestamp (keeps render pure for React Compiler).
   const [previewTime] = useState(() => new Date().toISOString());
@@ -52,6 +54,8 @@ export default function CreateProjectPage() {
       hoursPerWeek,
       roles: cleanRoles,
       color,
+      cardTheme,
+      visibility,
     });
     if (!r.ok) return setError(r.error);
     nav(`/projects/${r.value.id}`);
@@ -70,14 +74,69 @@ export default function CreateProjectPage() {
     status: "open",
     createdAt: previewTime,
     color,
+    cardTheme,
+    visibility,
   };
+
+  const campusName = currentUser?.college || "your campus";
 
   return (
     <>
-      <PageHead title="Post an idea" subtitle="Say what you're building and exactly who you need." />
+      <PageHead title="Post an idea" subtitle="Say what you're building, pick who can see it, and who you need." />
 
       <div className="inc-create">
         <form className="inc-card ink" onSubmit={submit} noValidate>
+          {/* Visibility Section */}
+          <div className="inc-field" style={{ marginBottom: "1.6rem" }}>
+            <span className="inc-label" style={{ fontSize: "1.05rem" }}>Who can see this idea? (Visibility)</span>
+            <p className="inc-hint" style={{ marginBottom: ".6rem" }}>
+              Control who can discover this card and apply to join your team.
+            </p>
+            <div className="inc-vis-selector" role="radiogroup" aria-label="Idea visibility">
+              <label className={`inc-vis-option ${visibility === "private" ? "selected" : ""}`}>
+                <input
+                  type="radio"
+                  name="visibility"
+                  value="private"
+                  checked={visibility === "private"}
+                  onChange={() => setVisibility("private")}
+                />
+                <div className="vis-info">
+                  <strong>Private (Only you)</strong>
+                  <span>Only you can see this idea. Perfect for drafts, notes, or brainstorming.</span>
+                </div>
+              </label>
+
+              <label className={`inc-vis-option ${visibility === "campus" ? "selected" : ""}`}>
+                <input
+                  type="radio"
+                  name="visibility"
+                  value="campus"
+                  checked={visibility === "campus"}
+                  onChange={() => setVisibility("campus")}
+                />
+                <div className="vis-info">
+                  <strong>Campus Only ({campusName})</strong>
+                  <span>People from your campus can see and apply. Classmates-only collaboration.</span>
+                </div>
+              </label>
+
+              <label className={`inc-vis-option ${visibility === "everyone" ? "selected" : ""}`}>
+                <input
+                  type="radio"
+                  name="visibility"
+                  value="everyone"
+                  checked={visibility === "everyone"}
+                  onChange={() => setVisibility("everyone")}
+                />
+                <div className="vis-info">
+                  <strong>Everyone (Global)</strong>
+                  <span>Anyone on Incudorm across all campuses can discover and apply.</span>
+                </div>
+              </label>
+            </div>
+          </div>
+
           <Field label="Idea title" htmlFor="c-title">
             <input id="c-title" className="inc-input" maxLength={80} value={title} onChange={(e) => setTitle(e.target.value)} />
           </Field>
@@ -107,8 +166,34 @@ export default function CreateProjectPage() {
             </Field>
           </div>
 
+          {/* Card Theme Picker */}
+          <div className="inc-field" style={{ marginBottom: "1.4rem" }}>
+            <span className="inc-label">Card Theme</span>
+            <p className="inc-hint" style={{ marginBottom: ".5rem" }}>
+              Choose a visual style for how your idea card looks across feeds.
+            </p>
+            <div className="inc-themes-grid">
+              {CARD_THEMES.map((t) => (
+                <button
+                  type="button"
+                  key={t.id}
+                  className={`inc-theme-btn ${cardTheme === t.id ? "active" : ""}`}
+                  onClick={() => setCardTheme(t.id)}
+                >
+                  <span className="name">{t.label}</span>
+                  <span className="desc">{t.desc}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <Field label="Card color">
-            <ColorPicker value={color} onChange={setColor} />
+            <ColorPicker<CardColor>
+              value={color}
+              onChange={(next) => setColor(next)}
+              name="card-color"
+              hint="Vibrant accent color for your idea banner, tags and badges."
+            />
           </Field>
 
           <h2 style={{ fontSize: "1.4rem", margin: "1.4rem 0 .3rem" }}>Who do you need?</h2>

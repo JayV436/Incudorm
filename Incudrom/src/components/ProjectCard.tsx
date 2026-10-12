@@ -20,14 +20,25 @@ interface Props {
 export function ProjectCard({ project, owner, mine, preview, tilt }: Props) {
   const [shareOpen, setShareOpen] = useState(false);
   const colorObj = project.color ? CARD_COLORS.find((c) => c.id === project.color) : null;
+  const cardTheme = project.cardTheme || "classic";
+  const visibility = project.visibility || "everyone";
+
   const style = {
     "--pop": colorObj?.value ?? popFor(project.id),
     "--tilt": tilt ?? "0deg",
   } as CSSProperties;
+
   const content = (
     <>
       <div className="inc-pcard-top">
-        <span>{project.stage} · {project.hoursPerWeek} hrs/week</span>
+        <div style={{ display: "flex", alignItems: "center", gap: ".5rem", flexWrap: "wrap" }}>
+          <span>{project.stage} · {project.hoursPerWeek} hrs/week</span>
+          <span className={`inc-vis-pill ${visibility}`}>
+            {visibility === "private" && "Private"}
+            {visibility === "campus" && "Campus"}
+            {visibility === "everyone" && "Everyone"}
+          </span>
+        </div>
         {!preview && (
           <button
             type="button"
@@ -64,13 +75,13 @@ export function ProjectCard({ project, owner, mine, preview, tilt }: Props) {
         </div>
         <div className="inc-pcard-foot">
           <span className="who">
-            <Avatar name={owner?.name ?? "?"} size={32} />
+            <Avatar name={owner?.name ?? "?"} color={owner?.color} size={32} />
             <span>
               <b>{owner?.name ?? "Unknown student"}</b>
               {owner?.college}
             </span>
           </span>
-          <span style={{ textAlign: "right" }}>
+          <span style={{ textAlign: "right", display: "inline-flex", gap: ".3rem", flexWrap: "wrap", justifyContent: "flex-end" }}>
             {mine && <Chip tone="sun">Your idea</Chip>}
             {project.status === "closed" && <Chip tone="solid">Closed</Chip>}
             {!mine && project.status === "open" && <span>{timeAgo(project.createdAt)}</span>}
@@ -80,16 +91,18 @@ export function ProjectCard({ project, owner, mine, preview, tilt }: Props) {
     </>
   );
 
+  const cardClasses = `inc-pcard inc-card-theme-${cardTheme}`;
+
   if (preview) {
     return (
-      <div className="inc-pcard" style={style}>
+      <div className={cardClasses} data-card-theme={cardTheme} data-visibility={visibility} style={style}>
         {content}
       </div>
     );
   }
   return (
     <>
-      <Link className="inc-pcard" style={style} to={`/projects/${project.id}`}>
+      <Link className={cardClasses} data-card-theme={cardTheme} data-visibility={visibility} style={style} to={`/projects/${project.id}`}>
         {content}
       </Link>
       <ShareModal project={project} open={shareOpen} onClose={() => setShareOpen(false)} />

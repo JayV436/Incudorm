@@ -3,10 +3,11 @@ import { useApp } from "../../appContext";
 import { ApplicationRow } from "../../components/ApplicationRow";
 import { Avatar, Chip, EmptyState } from "../../components/ui";
 import { timeAgo } from "../../lib/format";
+import type { ProjectVisibility } from "../../types";
 
 /** Route: /dashboard/my-projects. Your ideas and the requests people sent to join them. */
 export default function MyProjectsPage() {
-  const { currentUser, projects, applications, getUser, setProjectStatus } = useApp();
+  const { currentUser, projects, applications, getUser, setProjectStatus, setProjectVisibility } = useApp();
 
   const mine = projects
     .filter((p) => p.ownerId === currentUser?.id)
@@ -43,6 +44,7 @@ export default function MyProjectsPage() {
             return b.createdAt.localeCompare(a.createdAt);
           });
         const pending = apps.filter((a) => a.status === "pending").length;
+        const vis = p.visibility || "everyone";
 
         return (
           <section className="inc-card ink" key={p.id}>
@@ -52,13 +54,29 @@ export default function MyProjectsPage() {
                   <Link to={`/projects/${p.id}`} style={{ textDecoration: "none" }}>{p.title}</Link>
                 </h2>
                 <div className="inc-chips">
+                  <span className={`inc-vis-pill ${vis}`}>
+                    {vis === "private" && "Private (Only you)"}
+                    {vis === "campus" && "Campus only"}
+                    {vis === "everyone" && "Everyone"}
+                  </span>
                   <Chip tone="sun">{p.stage}</Chip>
                   <Chip>{p.hoursPerWeek} hrs/week</Chip>
                   <Chip tone={p.status === "open" ? "mint" : "solid"}>{p.status === "open" ? "Open" : "Closed"}</Chip>
                   <Chip>Posted {timeAgo(p.createdAt)}</Chip>
                 </div>
               </div>
-              <div style={{ display: "flex", gap: ".5rem", flexWrap: "wrap", alignItems: "flex-start" }}>
+              <div style={{ display: "flex", gap: ".5rem", flexWrap: "wrap", alignItems: "center" }}>
+                <select
+                  className="inc-select"
+                  style={{ width: "auto", padding: ".35rem .75rem", fontSize: ".88rem", borderRadius: 999 }}
+                  value={vis}
+                  onChange={(e) => setProjectVisibility(p.id, e.target.value as ProjectVisibility)}
+                  title="Change visibility"
+                >
+                  <option value="private">Private</option>
+                  <option value="campus">Campus</option>
+                  <option value="everyone">Everyone</option>
+                </select>
                 <Link className="inc-btn inc-btn-ghost inc-btn-small" to={`/projects/${p.id}`}>View idea</Link>
                 <button
                   type="button"
@@ -79,7 +97,7 @@ export default function MyProjectsPage() {
                     if (!m) return null;
                     return (
                       <Link className="inc-member" to={`/profile/${m.id}`} key={tid}>
-                        <Avatar name={m.name} size={32} />
+                        <Avatar name={m.name} color={m.color} size={32} />
                         <b>{m.name}</b>
                       </Link>
                     );

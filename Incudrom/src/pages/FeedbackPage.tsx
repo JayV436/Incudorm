@@ -8,18 +8,18 @@ import { supabase } from "../lib/supabase";
 type FeedbackCategory = "feature" | "bug" | "college" | "general";
 
 const CATEGORIES: { id: FeedbackCategory; label: string; icon: string; desc: string }[] = [
-  { id: "feature", label: "Feature Idea", icon: "💡", desc: "Something you wish Incudorm could do" },
-  { id: "bug", label: "Bug Report", icon: "🐛", desc: "Something isn't working as expected" },
-  { id: "college", label: "College Request", icon: "🏫", desc: "Request support for your campus or domain" },
-  { id: "general", label: "General Feedback", icon: "💬", desc: "Thoughts, praise, or suggestions" },
+  { id: "feature", label: "Feature Idea", icon: "Idea", desc: "Something you wish Incudorm could do" },
+  { id: "bug", label: "Bug Report", icon: "Bug", desc: "Something isn't working as expected" },
+  { id: "college", label: "College Request", icon: "Campus", desc: "Request support for your campus or domain" },
+  { id: "general", label: "General Feedback", icon: "Chat", desc: "Thoughts, praise, or suggestions" },
 ];
 
 const RATINGS = [
-  { val: 1, label: "Poor", emoji: "😞" },
-  { val: 2, label: "Fair", emoji: "🙁" },
-  { val: 3, label: "Okay", emoji: "😐" },
-  { val: 4, label: "Good", emoji: "🙂" },
-  { val: 5, label: "Loving it!", emoji: "🚀" },
+  { val: 1, label: "Poor" },
+  { val: 2, label: "Fair" },
+  { val: 3, label: "Okay" },
+  { val: 4, label: "Good" },
+  { val: 5, label: "Loving it!" },
 ];
 
 export default function FeedbackPage() {
@@ -106,7 +106,7 @@ export default function FeedbackPage() {
 
       {submitted ? (
         <section className="inc-card ink" style={{ textAlign: "center", padding: "3rem 2rem" }}>
-          <div style={{ fontSize: "3.5rem", marginBottom: ".6rem" }}>🎉</div>
+          <div style={{ fontSize: "2rem", fontWeight: 800, marginBottom: ".6rem", color: "var(--inc-brand)" }}>Feedback received</div>
           <h2>Thank you for your feedback!</h2>
           <p className="inc-muted" style={{ margin: ".8rem auto 1.8rem", maxWidth: "48ch" }}>
             Every submission is reviewed by our team. Your input directly helps us make Incudorm better for creators and builders across campuses.
@@ -147,7 +147,7 @@ export default function FeedbackPage() {
                       transition: "all .15s ease",
                     }}
                   >
-                    <span style={{ fontSize: "1.3rem", display: "block", marginBottom: ".3rem" }}>{cat.icon}</span>
+                    <span style={{ fontSize: ".75rem", fontWeight: 700, letterSpacing: ".04em", textTransform: "uppercase", display: "inline-block", padding: ".15rem .45rem", borderRadius: "4px", background: "var(--inc-line)", color: "var(--inc-ink)", marginBottom: ".4rem" }}>{cat.icon}</span>
                     <b style={{ display: "block", fontSize: ".95rem", color: "var(--inc-ink)" }}>{cat.label}</b>
                     <span className="inc-muted inc-small" style={{ display: "block", marginTop: ".15rem", lineHeight: 1.3 }}>
                       {cat.desc}
@@ -180,7 +180,7 @@ export default function FeedbackPage() {
                       gap: ".4rem",
                     }}
                   >
-                    <span>{r.emoji}</span>
+                    <span style={{ fontWeight: 700, fontSize: ".9rem", minWidth: "1.2em", textAlign: "center" }}>{r.val}</span>
                     <span>{r.label}</span>
                   </button>
                 );

@@ -4,12 +4,26 @@ import { Link } from "react-router-dom";
 import { SKILL_OPTIONS } from "../types";
 import { initials, popFor } from "../lib/format";
 
-export function Avatar({ name, size = 40 }: { name: string; size?: number }) {
+import { USER_COLORS } from "../types";
+
+export function Avatar({
+  name,
+  size = 40,
+  color,
+}: {
+  name: string;
+  size?: number;
+  color?: string;
+}) {
+  const resolvedColor = color
+    ? (USER_COLORS.find((c) => c.id === color)?.value || color)
+    : popFor(name);
+
   const style = {
     width: size,
     height: size,
     fontSize: size * 0.38,
-    "--pop": popFor(name),
+    "--pop": resolvedColor,
   } as CSSProperties;
   return (
     <span className="inc-avatar" style={style} aria-hidden="true">

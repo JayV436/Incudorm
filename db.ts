@@ -30,6 +30,8 @@ export interface ProfileRow {
   goal: Goal;
   onboarded: boolean;
   portfolio: PortfolioItem[];
+  user_color?: string;
+  app_theme?: string;
   created_at: string;
 }
 
@@ -49,6 +51,8 @@ interface ProjectRow {
   stage: Stage;
   hours_per_week: number;
   color: CardColor;
+  card_theme?: string;
+  visibility?: string;
   status: ProjectStatus;
   created_at: string;
   project_roles: RoleRow[];

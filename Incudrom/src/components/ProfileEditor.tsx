@@ -1,15 +1,16 @@
 import { useState } from "react";
 import { useApp } from "../appContext";
 import { makeId } from "../lib/id";
-import { HOURS_OPTIONS, YEARS } from "../types";
-import type { PortfolioItem, Student } from "../types";
-import { Field, SkillPicker } from "./ui";
+import { HOURS_OPTIONS, YEARS, USER_COLORS, APP_THEMES } from "../types";
+import type { PortfolioItem, Student, UserColor, AppTheme } from "../types";
+import { ColorPicker } from "./ColorPicker";
+import { Avatar, Field, SkillPicker } from "./ui";
 
 type Draft = Pick<Student, "name" | "college" | "course" | "year" | "bio" | "skills" | "hoursPerWeek" | "links" | "portfolio">;
 
-/** Full profile form: details, skills, availability, links and portfolio. */
+/** Full profile form: details, skills, availability, links, appearance and portfolio. */
 export function ProfileEditor() {
-  const { currentUser, updateProfile } = useApp();
+  const { currentUser, updateProfile, setAppTheme } = useApp();
 
   const [draft, setDraft] = useState<Draft>(() => ({
     name: currentUser?.name ?? "",
@@ -22,12 +23,20 @@ export function ProfileEditor() {
     links: currentUser?.links ?? { github: "", linkedin: "", website: "" },
     portfolio: currentUser?.portfolio ?? [],
   }));
+  const [color, setColor] = useState<UserColor>(currentUser?.color ?? "sun");
+  const [theme, setTheme] = useState<AppTheme>(currentUser?.theme ?? "classic");
   const [item, setItem] = useState({ title: "", description: "", url: "" });
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
 
   function set<K extends keyof Draft>(key: K, value: Draft[K]) {
     setDraft((d) => ({ ...d, [key]: value }));
+    setSaved(false);
+  }
+
+  function handleThemeChange(t: AppTheme) {
+    setTheme(t);
+    setAppTheme(t);
     setSaved(false);
   }
 
@@ -58,7 +67,10 @@ export function ProfileEditor() {
       college: draft.college.trim(),
       course: draft.course.trim(),
       bio: draft.bio.trim(),
+      color,
+      theme,
     });
+    setAppTheme(theme);
     setError("");
     setSaved(true);
   }
@@ -97,6 +109,52 @@ export function ProfileEditor() {
             onChange={(e) => set("bio", e.target.value)}
           />
         </Field>
+      </section>
+
+      <section className="inc-card">
+        <h2>Profile appearance & personalization</h2>
+        <p className="inc-muted inc-small" style={{ marginBottom: "1.2rem" }}>
+          Personalize your avatar signature color and choose an app theme to make Incudorm yours.
+        </p>
+
+        <div style={{ display: "flex", alignItems: "center", gap: "1.25rem", marginBottom: "1.2rem", padding: "1rem", background: "var(--inc-chip)", borderRadius: 14 }}>
+          <Avatar name={draft.name || "?"} color={color} size={64} />
+          <div>
+            <strong>{draft.name || "Your Name"}</strong>
+            <p className="inc-hint">Avatar preview with your chosen signature color.</p>
+          </div>
+        </div>
+
+        <div className="inc-field">
+          <span className="inc-label">Your profile color</span>
+          <ColorPicker<UserColor>
+            value={color}
+            colors={USER_COLORS}
+            onChange={(next) => setColor(next)}
+            name="user-color-picker"
+            hint="Shows on your avatar, profile page, and identity cards across Incudorm."
+          />
+        </div>
+
+        <div className="inc-field" style={{ marginTop: "1.4rem", marginBottom: 0 }}>
+          <span className="inc-label">App theme</span>
+          <p className="inc-hint" style={{ marginBottom: ".6rem" }}>
+            Select your preferred visual style across all screens.
+          </p>
+          <div className="inc-themes-grid">
+            {APP_THEMES.map((t) => (
+              <button
+                type="button"
+                key={t.id}
+                className={`inc-theme-btn ${theme === t.id ? "active" : ""}`}
+                onClick={() => handleThemeChange(t.id)}
+              >
+                <span className="name">{t.label}</span>
+                <span className="desc">{t.desc}</span>
+              </button>
+            ))}
+          </div>
+        </div>
       </section>
 
       <section className="inc-card">

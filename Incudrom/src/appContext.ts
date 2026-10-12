@@ -1,15 +1,19 @@
 import { createContext, useContext } from "react";
 import type {
+  AppTheme,
   Application,
   ApplicationStatus,
   CardColor,
+  CardTheme,
   Message,
   Project,
   ProjectStatus,
+  ProjectVisibility,
   RoleNeed,
   Stage,
   Student,
   Thread,
+  UserColor,
 } from "./types";
 
 export type Result<T> =
@@ -33,9 +37,14 @@ export interface NewProjectInput {
   hoursPerWeek: number;
   roles: RoleNeed[];
   color?: CardColor;
+  cardTheme?: CardTheme;
+  visibility?: ProjectVisibility;
 }
 
-export type ProfilePatch = Partial<Omit<Student, "id" | "email" | "createdAt" | "verified">>;
+export type ProfilePatch = Partial<Omit<Student, "id" | "email" | "createdAt" | "verified">> & {
+  color?: UserColor;
+  theme?: AppTheme;
+};
 
 export interface AppContextValue {
   currentUser: Student | null;
@@ -44,6 +53,8 @@ export interface AppContextValue {
   applications: Application[];
   threads: Thread[];
   messages: Message[];
+  appTheme: AppTheme;
+  setAppTheme: (theme: AppTheme) => void;
   getUser: (id: string) => Student | undefined;
   signUp: (input: SignUpInput) => Promise<Result<Student>>;
   logIn: (email: string, password: string) => Promise<Result<Student>>;
@@ -51,6 +62,7 @@ export interface AppContextValue {
   updateProfile: (patch: ProfilePatch) => void | Promise<void>;
   createProject: (input: NewProjectInput) => Promise<Result<Project>>;
   setProjectStatus: (projectId: string, status: ProjectStatus) => void | Promise<void>;
+  setProjectVisibility: (projectId: string, visibility: ProjectVisibility) => void | Promise<void>;
   applyToProject: (projectId: string, roleId: string, message: string) => Promise<Result<Application>>;
   respondToApplication: (applicationId: string, status: Exclude<ApplicationStatus, "pending">) => void | Promise<void>;
   startThread: (otherUserId: string, projectId?: string | null) => Thread;
