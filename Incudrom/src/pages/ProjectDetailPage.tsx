@@ -20,7 +20,24 @@ export default function ProjectDetailPage() {
 
   const project = projects.find((p) => p.id === id);
 
-  if (!project || !currentUser) {
+  // Access gate: enforce visibility rules on the detail page too,
+  // so navigating directly to a private URL doesn't bypass the feed filter.
+  const isOwner = project?.ownerId === currentUser?.id;
+  const owner = project ? getUser(project.ownerId) : undefined;
+  const visBlocked = (() => {
+    if (!project || !currentUser) return false;
+    const vis = project.visibility || "everyone";
+    if (vis === "private") return !isOwner;
+    if (vis === "campus") {
+      if (isOwner) return false;
+      const myCollege = (currentUser.college ?? "").trim().toLowerCase();
+      const ownerCollege = (owner?.college ?? "").trim().toLowerCase();
+      return !(myCollege && ownerCollege && myCollege === ownerCollege);
+    }
+    return false;
+  })();
+
+  if (!project || !currentUser || visBlocked) {
     return (
       <EmptyState title="Idea not found" text="It may have been removed, or the link is wrong.">
         <Link className="inc-btn inc-btn-primary" to="/projects">Back to Discover</Link>
@@ -28,8 +45,7 @@ export default function ProjectDetailPage() {
     );
   }
 
-  const owner = getUser(project.ownerId);
-  const isOwner = project.ownerId === currentUser.id;
+
   const onTeam = project.teamIds.includes(currentUser.id);
   const myApp = applications.find((a) => a.projectId === project.id && a.applicantId === currentUser.id);
   const projectApps = applications.filter((a) => a.projectId === project.id);

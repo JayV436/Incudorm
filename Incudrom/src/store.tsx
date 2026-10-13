@@ -184,7 +184,7 @@ function projectRowToProject(r: ProjectRow): Project {
     teamIds: (r.project_members ?? []).map((m) => m.user_id),
     status: r.status as Project["status"],
     createdAt: r.created_at,
-    color: ((meta.color || r.color) as Project["color"]) || "sun",
+    color: ((r.color || meta.color) as Project["color"]) || "sun",
     cardTheme: (r.card_theme as CardTheme) || meta.cardTheme || "classic",
     visibility: (r.visibility as ProjectVisibility) || meta.visibility || "everyone",
   };
