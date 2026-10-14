@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useApp } from "../../appContext";
 import { ApplicationRow } from "../../components/ApplicationRow";
@@ -7,7 +8,8 @@ import type { ProjectVisibility } from "../../types";
 
 /** Route: /dashboard/my-projects. Your ideas and the requests people sent to join them. */
 export default function MyProjectsPage() {
-  const { currentUser, projects, applications, getUser, setProjectStatus, setProjectVisibility } = useApp();
+  const { currentUser, projects, applications, getUser, setProjectStatus, setProjectVisibility, deleteProject } = useApp();
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   const mine = projects
     .filter((p) => p.ownerId === currentUser?.id)
@@ -48,7 +50,7 @@ export default function MyProjectsPage() {
 
         return (
           <section className="inc-card ink" key={p.id}>
-            <div style={{ display: "flex", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap", marginBottom: "1rem" }}>
+            <div className="inc-my-project-header" style={{ display: "flex", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap", marginBottom: "1rem" }}>
               <div>
                 <h2 style={{ marginBottom: ".4rem" }}>
                   <Link to={`/projects/${p.id}`} style={{ textDecoration: "none" }}>{p.title}</Link>
@@ -74,7 +76,7 @@ export default function MyProjectsPage() {
                   title="Change visibility"
                 >
                   <option value="private">Private</option>
-                  <option value="campus">Campus</option>
+                  <option value="campus">Campus only</option>
                   <option value="everyone">Everyone</option>
                 </select>
                 <Link className="inc-btn inc-btn-ghost inc-btn-small" to={`/projects/${p.id}`}>View idea</Link>
@@ -85,6 +87,35 @@ export default function MyProjectsPage() {
                 >
                   {p.status === "open" ? "Close applications" : "Reopen applications"}
                 </button>
+                {confirmDelete === p.id ? (
+                  <>
+                    <button
+                      type="button"
+                      className="inc-btn inc-btn-danger inc-btn-small"
+                      onClick={async () => {
+                        await deleteProject(p.id);
+                        setConfirmDelete(null);
+                      }}
+                    >
+                      Confirm delete
+                    </button>
+                    <button
+                      type="button"
+                      className="inc-btn inc-btn-ghost inc-btn-small"
+                      onClick={() => setConfirmDelete(null)}
+                    >
+                      Cancel
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    className="inc-btn inc-btn-danger inc-btn-small"
+                    onClick={() => setConfirmDelete(p.id)}
+                  >
+                    Delete idea
+                  </button>
+                )}
               </div>
             </div>
 

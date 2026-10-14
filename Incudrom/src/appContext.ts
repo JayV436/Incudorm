@@ -77,6 +77,8 @@ export interface AppContextValue {
   withdrawApplication: (applicationId: string) => void | Promise<void>;
   /** Deletes the signed in student and everything they posted or sent. */
   deleteAccount: () => void | Promise<void>;
+  /** Deletes one of the current user's own projects. */
+  deleteProject: (projectId: string) => void | Promise<void>;
 }
 
 export const AppContext = createContext<AppContextValue | null>(null);

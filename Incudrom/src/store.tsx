@@ -750,6 +750,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
+  const deleteProject = useCallback<AppContextValue["deleteProject"]>(async (projectId) => {
+    await supabase.from("projects").delete().eq("id", projectId);
+    setState((prev) => ({
+      ...prev,
+      projects: prev.projects.filter((p) => p.id !== projectId),
+      applications: prev.applications.filter((a) => a.projectId !== projectId),
+    }));
+  }, []);
+
   const deleteAccount = useCallback<AppContextValue["deleteAccount"]>(async () => {
     await supabase.rpc("delete_my_account");
     // onAuthStateChange resets state after deletion.
@@ -783,8 +792,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       devVerificationCode: null, // Supabase handles verification emails
       withdrawApplication,
       deleteAccount,
+      deleteProject,
     }),
-    [state, appTheme, setAppTheme, getUser, signUp, logIn, logOut, updateProfile, createProject, setProjectStatus, setProjectVisibility, applyToProject, respondToApplication, startThread, sendMessage, verifyEmail, resendVerification, withdrawApplication, deleteAccount],
+    [state, appTheme, setAppTheme, getUser, signUp, logIn, logOut, updateProfile, createProject, setProjectStatus, setProjectVisibility, applyToProject, respondToApplication, startThread, sendMessage, verifyEmail, resendVerification, withdrawApplication, deleteAccount, deleteProject],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

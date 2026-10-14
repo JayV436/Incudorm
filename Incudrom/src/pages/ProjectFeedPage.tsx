@@ -6,7 +6,7 @@ import { EmptyState, PageHead } from "../components/ui";
 import { STAGES } from "../types";
 import type { Project } from "../types";
 
-type SectionTab = "all" | "private" | "campus" | "everyone";
+type SectionTab = "everyone" | "campus" | "private";
 
 /** Route: /projects */
 export default function ProjectFeedPage() {
@@ -15,7 +15,7 @@ export default function ProjectFeedPage() {
   const [skill, setSkill] = useState("");
   const [stage, setStage] = useState("");
   const [matchMe, setMatchMe] = useState(false);
-  const [sectionTab, setSectionTab] = useState<SectionTab>("all");
+  const [sectionTab, setSectionTab] = useState<SectionTab>("everyone");
 
   // Skills that real ideas are asking for right now.
   const skillsInUse = useMemo(() => {
@@ -130,11 +130,19 @@ export default function ProjectFeedPage() {
       <div className="inc-vis-tabs" role="tablist" aria-label="Idea visibility sections">
         <button
           type="button"
-          className={`inc-vis-tab ${sectionTab === "all" ? "active" : ""}`}
-          onClick={() => setSectionTab("all")}
+          className={`inc-vis-tab ${sectionTab === "everyone" ? "active" : ""}`}
+          onClick={() => setSectionTab("everyone")}
         >
-          All Sections
-          <span className="count">{filtered.length}</span>
+          Everyone
+          <span className="count">{everyoneIdeas.length}</span>
+        </button>
+        <button
+          type="button"
+          className={`inc-vis-tab ${sectionTab === "campus" ? "active" : ""}`}
+          onClick={() => setSectionTab("campus")}
+        >
+          Campus Only
+          <span className="count">{campusIdeas.length}</span>
         </button>
         <button
           type="button"
@@ -143,22 +151,6 @@ export default function ProjectFeedPage() {
         >
           Private
           <span className="count">{privateIdeas.length}</span>
-        </button>
-        <button
-          type="button"
-          className={`inc-vis-tab ${sectionTab === "campus" ? "active" : ""}`}
-          onClick={() => setSectionTab("campus")}
-        >
-          Campus ({campusName})
-          <span className="count">{campusIdeas.length}</span>
-        </button>
-        <button
-          type="button"
-          className={`inc-vis-tab ${sectionTab === "everyone" ? "active" : ""}`}
-          onClick={() => setSectionTab("everyone")}
-        >
-          Everyone
-          <span className="count">{everyoneIdeas.length}</span>
         </button>
       </div>
 
@@ -216,8 +208,60 @@ export default function ProjectFeedPage() {
         </EmptyState>
       ) : (
         <div className="inc-feed-sections">
-          {/* Section 1: Private (Only user should be able to see) */}
-          {(sectionTab === "all" || sectionTab === "private") && (
+          {/* Section 1: Everyone (Anyone using this can see) */}
+          {sectionTab === "everyone" && (
+            <section className="inc-feed-section everyone-section">
+              <div className="inc-feed-sec-head">
+                <div className="sec-title-wrap">
+                  <div>
+                    <h2>Everyone</h2>
+                    <p>Visible to all students across every university and college on Incudorm.</p>
+                  </div>
+                </div>
+                <span className="inc-sec-tag everyone">
+                  {everyoneIdeas.length} {everyoneIdeas.length === 1 ? "idea" : "ideas"} · Global
+                </span>
+              </div>
+
+              {everyoneIdeas.length === 0 ? (
+                <div className="inc-empty-sec">
+                  <p>No global ideas found matching your filters.</p>
+                  <Link className="inc-btn inc-btn-ghost inc-btn-small" to="/projects/create">Post an idea</Link>
+                </div>
+              ) : (
+                renderCardGrid(everyoneIdeas)
+              )}
+            </section>
+          )}
+
+          {/* Section 2: Campus (People from same campus can see) */}
+          {sectionTab === "campus" && (
+            <section className="inc-feed-section campus-section">
+              <div className="inc-feed-sec-head">
+                <div className="sec-title-wrap">
+                  <div>
+                    <h2>Campus Only — {campusName}</h2>
+                    <p>Visible to students from your college campus. Collaborate with classmates.</p>
+                  </div>
+                </div>
+                <span className="inc-sec-tag campus">
+                  {campusIdeas.length} {campusIdeas.length === 1 ? "idea" : "ideas"} · Same campus
+                </span>
+              </div>
+
+              {campusIdeas.length === 0 ? (
+                <div className="inc-empty-sec">
+                  <p>No campus ideas posted for <strong>{campusName}</strong> yet. Be the first to share one with your campus!</p>
+                  <Link className="inc-btn inc-btn-ghost inc-btn-small" to="/projects/create">Post for your campus</Link>
+                </div>
+              ) : (
+                renderCardGrid(campusIdeas)
+              )}
+            </section>
+          )}
+
+          {/* Section 3: Private (Only user should be able to see) */}
+          {sectionTab === "private" && (
             <section className="inc-feed-section private-section">
               <div className="inc-feed-sec-head">
                 <div className="sec-title-wrap">
@@ -238,57 +282,6 @@ export default function ProjectFeedPage() {
                 </div>
               ) : (
                 renderCardGrid(privateIdeas)
-              )}
-            </section>
-          )}
-
-          {/* Section 2: Campus (People from same campus can see) */}
-          {(sectionTab === "all" || sectionTab === "campus") && (
-            <section className="inc-feed-section campus-section">
-              <div className="inc-feed-sec-head">
-                <div className="sec-title-wrap">
-                  <div>
-                    <h2>Campus Ideas — {campusName}</h2>
-                    <p>Visible to students from your college campus. Collaborate with classmates.</p>
-                  </div>
-                </div>
-                <span className="inc-sec-tag campus">
-                  {campusIdeas.length} {campusIdeas.length === 1 ? "idea" : "ideas"} · Same campus
-                </span>
-              </div>
-
-              {campusIdeas.length === 0 ? (
-                <div className="inc-empty-sec">
-                  <p>No campus ideas posted for <strong>{campusName}</strong> yet. Be the first to share one with your campus!</p>
-                  <Link className="inc-btn inc-btn-ghost inc-btn-small" to="/projects/create">Post for your campus</Link>
-                </div>
-              ) : (
-                renderCardGrid(campusIdeas)
-              )}
-            </section>
-          )}
-
-          {/* Section 3: Everyone (Anyone using this can see) */}
-          {(sectionTab === "all" || sectionTab === "everyone") && (
-            <section className="inc-feed-section everyone-section">
-              <div className="inc-feed-sec-head">
-                <div className="sec-title-wrap">
-                  <div>
-                    <h2>Everyone</h2>
-                    <p>Visible to all students across every university and college on Incudorm.</p>
-                  </div>
-                </div>
-                <span className="inc-sec-tag everyone">
-                  {everyoneIdeas.length} {everyoneIdeas.length === 1 ? "idea" : "ideas"} · Global
-                </span>
-              </div>
-
-              {everyoneIdeas.length === 0 ? (
-                <div className="inc-empty-sec">
-                  <p>No global ideas found matching your filters.</p>
-                </div>
-              ) : (
-                renderCardGrid(everyoneIdeas)
               )}
             </section>
           )}

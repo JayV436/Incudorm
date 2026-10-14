@@ -392,4 +392,31 @@ const CSS = `
 @media (prefers-reduced-motion:reduce){
   .incudorm .inc-btn,.incudorm .inc-toggle,.incudorm .inc-pcard,.incudorm .inc-progress span{transition:none}
 }
+
+/* ─── Mobile responsive ─────────────────────────────────────────────────── */
+@media (max-width:600px){
+  .incudorm .inc-grid{grid-template-columns:1fr}
+  .incudorm .inc-page-head{flex-direction:column;align-items:flex-start;gap:.6rem}
+  .incudorm .inc-page-head h1{font-size:clamp(1.55rem,7vw,2rem)}
+  .incudorm .inc-filters{flex-direction:column;align-items:stretch}
+  .incudorm .inc-filters .inc-input,.incudorm .inc-filters .inc-select{max-width:100%;width:100%}
+  .incudorm .inc-vis-tabs{flex-wrap:nowrap;overflow-x:auto;padding-bottom:.6rem;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .incudorm .inc-vis-tabs::-webkit-scrollbar{display:none}
+  .incudorm .inc-vis-tab{flex:none;white-space:nowrap}
+  .incudorm .inc-feed-sec-head{flex-direction:column;align-items:flex-start;gap:.5rem}
+  .incudorm .inc-auth{padding:1.25rem .9rem}
+  .incudorm .inc-auth-box{width:100%}
+  .incudorm .inc-stats{grid-template-columns:repeat(2,1fr)}
+  .incudorm .inc-vis-selector{grid-template-columns:1fr}
+  .incudorm .inc-themes-grid{grid-template-columns:repeat(2,1fr)}
+  .incudorm .inc-detail{grid-template-columns:1fr}
+  .incudorm .inc-create{grid-template-columns:1fr}
+  .incudorm .inc-profile-head{grid-template-columns:1fr}
+  .incudorm .inc-app-bar{gap:.6rem;padding:.6rem 0}
+  .incudorm .inc-logo{font-size:1.15rem}
+  .incudorm .inc-main{padding:1.5rem 0 3rem}
+  .incudorm .inc-wrap{width:calc(100% - 1.5rem)}
+  .incudorm .inc-pcard-foot{flex-wrap:wrap;gap:.4rem}
+  .incudorm .inc-card.ink .inc-my-project-header{flex-direction:column;align-items:flex-start;gap:.6rem}
+}
 `;
