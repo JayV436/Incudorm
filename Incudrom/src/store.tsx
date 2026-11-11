@@ -57,7 +57,8 @@ function saveStoredProjectMeta(id: string, meta: ProjectMeta) {
     const all = getStoredProjectMeta();
     all[id] = { ...all[id], ...meta };
     localStorage.setItem(PROJECT_META_KEY, JSON.stringify(all));
-  } catch {}
+  } catch { /* storage quota or parse error — non-fatal */ }
+
 }
 
 function getStoredUserMeta(): Record<string, UserMeta> {
@@ -74,7 +75,8 @@ function saveStoredUserMeta(id: string, meta: UserMeta) {
     const all = getStoredUserMeta();
     all[id] = { ...all[id], ...meta };
     localStorage.setItem(USER_META_KEY, JSON.stringify(all));
-  } catch {}
+  } catch { /* storage quota or parse error — non-fatal */ }
+
 }
 
 // ---------------------------------------------------------------------------
@@ -485,7 +487,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       const saved = localStorage.getItem(APP_THEME_KEY);
       if (saved) return saved as AppTheme;
-    } catch {}
+    } catch { /* localStorage unavailable — non-fatal */ }
+
     return "classic";
   });
 
@@ -493,7 +496,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setAppThemeState(theme);
     try {
       localStorage.setItem(APP_THEME_KEY, theme);
-    } catch {}
+    } catch { /* localStorage unavailable — non-fatal */ }
+
     const me = ref.current.currentUser;
     if (me) {
       saveStoredUserMeta(me.id, { theme });
@@ -512,7 +516,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setAppThemeState(patch.theme);
       try {
         localStorage.setItem(APP_THEME_KEY, patch.theme);
-      } catch {}
+      } catch { /* localStorage unavailable — non-fatal */ }
+
     }
     const dbPatch: Record<string, unknown> = {};
     if (patch.name !== undefined) dbPatch.name = patch.name;

@@ -60,29 +60,25 @@ export default function FeedbackPage() {
     };
 
     try {
-      // 1. Attempt to insert into Supabase feedback table
       const { error: dbError } = await supabase.from("feedback").insert(payload);
 
       if (dbError) {
-        // If the table does not exist yet or RLS blocks it, save locally as fallback
-        console.warn("Supabase feedback insert fallback:", dbError.message);
-        saveLocalFeedback(payload);
+        // The table may not exist yet, or RLS blocked the insert.
+        // Either way the feedback was NOT saved — tell the user so they can retry.
+        setError(
+          `Couldn't send your feedback: ${dbError.message}. Please try again or email us directly.`
+        );
+        setSubmitting(false);
+        return;
       }
+
+      // Only mark as submitted after a confirmed success.
+      setSubmitting(false);
+      setSubmitted(true);
     } catch (err) {
-      console.warn("Feedback network error fallback:", err);
-      saveLocalFeedback(payload);
-    }
-
-    setSubmitting(false);
-    setSubmitted(true);
-  }
-
-  function saveLocalFeedback(entry: Record<string, unknown>) {
-    try {
-      const existing = JSON.parse(localStorage.getItem("incudorm:feedback") || "[]");
-      localStorage.setItem("incudorm:feedback", JSON.stringify([entry, ...existing]));
-    } catch {
-      // storage quota or blocked
+      const msg = err instanceof Error ? err.message : "Network error";
+      setError(`Couldn't send your feedback: ${msg}. Check your connection and try again.`);
+      setSubmitting(false);
     }
   }
 
@@ -91,6 +87,7 @@ export default function FeedbackPage() {
     setSubmitted(false);
     setError("");
   }
+
 
   return (
     <div className="inc-stack" style={{ maxWidth: "720px", margin: "0 auto", padding: "1rem 0 3rem" }}>

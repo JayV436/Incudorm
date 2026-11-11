@@ -227,6 +227,14 @@ export default function AuthPage() {
                 </div>
               </Field>
 
+              {mode === "login" && (
+                <div style={{ textAlign: "right", marginTop: "-.4rem", marginBottom: ".8rem" }}>
+                  <Link className="inc-link" to="/auth/reset" style={{ fontSize: ".9rem" }}>
+                    Forgot password?
+                  </Link>
+                </div>
+              )}
+
               {error && (
                 <p className="inc-error" role="alert" style={{ marginBottom: "1rem" }}>
                   {error}

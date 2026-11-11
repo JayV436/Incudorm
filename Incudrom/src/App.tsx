@@ -6,9 +6,11 @@ import { homeFor } from "./lib/routes";
 import { RequireAuth } from "./components/AppShell";
 import { DashboardLayout } from "./components/DashboardLayout";
 import { PublicLayout } from "./components/PublicLayout";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import IncudormLanding from "./pages/IncudormLanding";
 import AuthPage from "./pages/AuthPage";
 import AuthCallbackPage from "./pages/AuthCallbackPage";
+import ResetPasswordPage from "./pages/auth/ResetPasswordPage";
 import OnboardingPage from "./pages/OnboardingPage";
 import ProjectFeedPage from "./pages/ProjectFeedPage";
 import ProjectDetailPage from "./pages/ProjectDetailPage";
@@ -22,6 +24,7 @@ import SettingsPage from "./pages/dashboard/SettingsPage";
 import PrivacyPage from "./pages/PrivacyPage";
 import TermsPage from "./pages/TermsPage";
 import FeedbackPage from "./pages/FeedbackPage";
+import NotFoundPage from "./pages/NotFoundPage";
 
 function LandingRoute() {
   const nav = useNavigate();
@@ -65,6 +68,7 @@ function LogoutRoute() {
  * Site map:
  *   Public        /                         Landing page
  *                 /auth                     Sign up, log in and email verification
+ *                 /auth/reset               Forgot password / set new password
  *   Onboarding    /onboarding               Profile setup wizard
  *   App           /projects                 Project discovery feed
  *                 /projects/:id             Project details and apply modal
@@ -76,44 +80,49 @@ function LogoutRoute() {
  *                 /settings                 Settings and edit profile
  *                 /messages(/:threadId)     Chats with matches (extra, not in the site map)
  *   Legal         /privacy, /terms
+ *   Errors        *                         404 Not Found
  */
 export default function App() {
   return (
-    <AppProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<LandingRoute />} />
-          <Route path="/auth" element={<AuthPage />} />
-          <Route path="/auth/callback" element={<AuthCallbackPage />} />
-          <Route path="/onboarding" element={<OnboardingPage />} />
-          <Route path="/logout" element={<LogoutRoute />} />
+    <ErrorBoundary>
+      <AppProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<LandingRoute />} />
+            <Route path="/auth" element={<AuthPage />} />
+            <Route path="/auth/callback" element={<AuthCallbackPage />} />
+            <Route path="/auth/reset" element={<ResetPasswordPage />} />
+            <Route path="/onboarding" element={<OnboardingPage />} />
+            <Route path="/logout" element={<LogoutRoute />} />
 
-          <Route element={<PublicLayout />}>
-            <Route path="/feedback" element={<FeedbackPage />} />
-            <Route path="/privacy" element={<PrivacyPage />} />
-            <Route path="/terms" element={<TermsPage />} />
-          </Route>
-
-          <Route element={<RequireAuth />}>
-            <Route path="/projects" element={<ProjectFeedPage />} />
-            <Route path="/projects/create" element={<CreateProjectPage />} />
-            <Route path="/projects/:id" element={<ProjectDetailPage />} />
-            <Route path="/students" element={<TalentDirectoryPage />} />
-            <Route path="/profile/:id" element={<ProfilePage />} />
-            <Route path="/messages" element={<MessagesPage />} />
-            <Route path="/messages/:threadId" element={<MessagesPage />} />
-
-            <Route element={<DashboardLayout />}>
-              <Route path="/dashboard" element={<Navigate to="/dashboard/my-projects" replace />} />
-              <Route path="/dashboard/my-projects" element={<MyProjectsPage />} />
-              <Route path="/dashboard/applications" element={<MyApplicationsPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
+            <Route element={<PublicLayout />}>
+              <Route path="/feedback" element={<FeedbackPage />} />
+              <Route path="/privacy" element={<PrivacyPage />} />
+              <Route path="/terms" element={<TermsPage />} />
             </Route>
-          </Route>
 
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </BrowserRouter>
-    </AppProvider>
+            <Route element={<RequireAuth />}>
+              <Route path="/projects" element={<ProjectFeedPage />} />
+              <Route path="/projects/create" element={<CreateProjectPage />} />
+              <Route path="/projects/:id" element={<ProjectDetailPage />} />
+              <Route path="/students" element={<TalentDirectoryPage />} />
+              <Route path="/profile/:id" element={<ProfilePage />} />
+              <Route path="/messages" element={<MessagesPage />} />
+              <Route path="/messages/:threadId" element={<MessagesPage />} />
+
+              <Route element={<DashboardLayout />}>
+                <Route path="/dashboard" element={<Navigate to="/dashboard/my-projects" replace />} />
+                <Route path="/dashboard/my-projects" element={<MyProjectsPage />} />
+                <Route path="/dashboard/applications" element={<MyApplicationsPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+              </Route>
+            </Route>
+
+            {/* Real 404 instead of a silent redirect to / */}
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+        </BrowserRouter>
+      </AppProvider>
+    </ErrorBoundary>
   );
 }
